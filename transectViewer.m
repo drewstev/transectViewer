@@ -457,6 +457,8 @@ uimenu(gdata.menu4,'label','Compare Profiles','callback',...
     @bathy_comp)
 gdata.plotrtkppk=uimenu(gdata.menu4,'label','PPK - RTK GPS Comparison',...
     'callback',@plot_ppk_rtk,'visible','off');
+uimenu(gdata.menu4,'label','Add metadata to .nc',...
+    'callback',@batch_add_meta_gui);
 
 
 gdata.menu5=uimenu('label','Options');
@@ -4079,7 +4081,144 @@ setFocus(hfig)
 end
 
 %%%%%----------------------------------------------------------------------
+function [] = batch_add_meta_gui(hf,evnt); %#ok
+% The basic layout of this GUI was made with the help of guidegetter,
+% available on the File Exchange at Mathworks.com
 
+gd=guidata(hf);
+gd2.metapath=gd.filepath;
+gd2.ncpath=gd.filepath;
+
+hf2 = figure('units','normalized',...
+    'position',[0.332 0.639 0.153 0.28],...
+    'menubar','none','name','Add/modify Metadata',...
+    'numbertitle','off','color',[0.94 0.94 0.94]);
+
+uicontrol(hf2,'style','pushbutton',...
+    'units','normalized',...
+    'position',[0.0806 0.76 0.253 0.0975],...
+    'string','Open Meta Info',...
+    'backgroundcolor',[0.94 0.94 0.94],...
+    'callback',@select_meta_txt);
+gd2.mtext = uicontrol(hf2,'style','text',...
+    'units','normalized',...
+    'position',[0.392 0.783 0.509 0.0613],...
+    'string','No File Selected',...
+    'backgroundcolor',[0.94 0.94 0.94]);
+
+gd2.nclist = uicontrol(hf2,'style','listbox',...
+    'units','normalized',...
+    'position',[0.396 0.203 0.52 0.515],...
+    'string','No files selected',...
+    'backgroundcolor',[1 1 1]);
+ uicontrol(hf2,'style','pushbutton',...
+    'units','normalized',...
+    'position',[0.0842 0.621 0.253 0.0975],...
+    'string','Open .nc files',...
+    'backgroundcolor',[0.94 0.94 0.94],...
+    'callback',@select_nc_files);
+
+
+uicontrol(hf2,'style','pushbutton',...
+    'units','normalized',...
+    'position',[0.363 0.0223 0.253 0.0919],...
+    'string','Cancel',...
+    'backgroundcolor',[0.94 0.94 0.94],...
+    'callback',@(h,e)(close(hf2)));
+
+
+gd2.done = uicontrol(hf2,'style','pushbutton',...
+    'units','normalized',...
+    'position',[0.663 0.0223 0.253 0.0919],...
+    'string','Done',...
+    'backgroundcolor',[0.94 0.94 0.94],...
+    'enable','off',...
+    'callback',@add_meta_nc);
+
+gd2.goflag=[0 0];
+guidata(hf2,gd2)
+end
+
+function select_meta_txt(hf2,evnt) %#ok
+
+gd2=guidata(hf2);
+[filename, pathname] = uigetfile( ...
+    {'*.*', 'All Files (*.*)'},...
+    'Select a File',gd2.metapath);
+if filename==0
+    return
+    
+end
+
+
+gd2.metafile=filename;
+gd2.metapath=pathname;
+gd2.goflag(1)=1;
+
+set(gd2.mtext,'string',gd2.metafile)
+
+if all(gd2.goflag==1)
+    set(gd2.done,'enable','on')
+end
+
+guidata(hf2,gd2)
+end
+
+function select_nc_files(hf2,evnt) %#ok
+
+gd2=guidata(hf2);
+[filename, pathname] = uigetfile( ...
+    {'*.nc', 'NC Files (*.nc)'},...
+    'Select a File(s)','multiselect','on',...
+    gd2.ncpath);
+if pathname==0
+    return
+    
+end
+
+if ~iscell(filename)
+    filename={filename};
+end;
+gd2.ncfiles=filename;
+gd2.ncpath=pathname;
+gd2.goflag(2)=1;
+
+
+set(gd2.nclist,'string',gd2.ncfiles)
+
+if all(gd2.goflag==1)
+    set(gd2.done,'enable','on')
+end
+
+guidata(hf2,gd2)
+end
+
+function add_meta_nc(hf2,evnt) %#ok
+
+gd2=guidata(hf2);
+
+%read the metadata text file
+ini=read_info([gd2.metapath,gd2.metafile]);
+natts=fieldnames(ini); %new atts
+
+for i=1:length(gd2.ncfiles)
+    for j=1:length(natts)
+        ncwriteatt([gd2.ncpath,gd2.ncfiles{i}],'/',...
+            natts{j},ini.(natts{j}))
+    end
+    
+end
+
+set(gd2.nclist,'string','No files selected')
+gd2.goflag(2)=0;
+set(gd2.done,'enable','off')
+
+gd2.ncpath=[];
+gd2.ncfiles=[];
+guidata(hf2,gd2);
+end
+
+%%%%%----------------------------------------------------------------------
 function panIm(hfig,eventdata,handles)%#ok
 
 gdata=guidata(hfig);
