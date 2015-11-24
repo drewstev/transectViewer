@@ -41,8 +41,8 @@ function transectViewer(varargin)
 % Andrew Stevens, 5/25/2007
 % astevens@usgs.gov
 
-gdata.tv_ver=2.74;
-gdata.modified='11/3/2014';
+gdata.tv_ver=2.8;
+gdata.modified='11/24/2015';
 
 
 %defaults
@@ -63,7 +63,7 @@ gdata.maxz=50;
 gdata.maxoffset=inf;
 %maximum interpolation distance
 gdata.maxGap=25;
-%fix hydrobox echosounder flag
+%fix hydrobox echosounder flag (derelict should remove this stuff)
 gdata.echofix=0;
 gdata.fixlen=200;
 %raw data options (odom echosounder)
@@ -137,7 +137,7 @@ switch fidx
         gdata.filesize=arrayfun(@(x)(sprintf('%.1f',x.bytes./1000)),...
             d,'uni',0);
         fInd=1:length(fnames);
-
+        
         %load and show first profile
         % try
         if gdata.invert==1
@@ -161,12 +161,12 @@ switch fidx
         ncfile=[pathname,filename];
         ncdata=nc2tv_struct(ncfile);
         fields=fieldnames(ncdata);
-        for i=1:length(fields)       
+        for i=1:length(fields)
             if ~strcmpi(fields{i},'gsetts')
                 gdata.(fields{i})=ncdata.(fields{i});
             end
         end
-                
+        
 end
 
 %set up figure window
@@ -239,8 +239,8 @@ gdata.edit1=uicontrol('style','edit',...
     'string',num2str(1),'fontsize',14,'callback',@movePhoto);
 
 gdata.text1=uicontrol('style','text',...
-                'fontsize',8,'units','normalized','position',...
-                [0.01 0.01 0.275 0.03],'horizontalalignment','left');
+    'fontsize',8,'units','normalized','position',...
+    [0.01 0.01 0.275 0.03],'horizontalalignment','left');
 
 switch fidx
     case 1
@@ -263,7 +263,7 @@ switch fidx
         set(gdata.edit1,'enable','off')
         set(gdata.text1,'string',['Displaying ',filename])
 end
-        
+
 
 
 %filter controls
@@ -482,7 +482,7 @@ switch fidx
     case 1
         if exist([pathname,strtok(fnames{1},'.'),'.bin'],'file')==0;
             set(gdata.menu9,'visible','off')
-            set(gdata.chrawz,'visible','off')            
+            set(gdata.chrawz,'visible','off')
         end
         gdata.bindata=[];
     case 2
@@ -516,7 +516,7 @@ uimenu(gdata.menu6,'label','Keyboard Shortcuts',...
 
 
 if isfield(gdata,'cdata')
-   
+    
     switch ncdata.gsetts.smoothing_type
         case 'mean'
             gdata.fType='mean';
@@ -536,7 +536,7 @@ if isfield(gdata,'cdata')
     set(gdata.edit3,'string',...
         sprintf('%0.0f',ncdata.gsetts.fstrength))
     set(gdata.edit4,'string',...
-        sprintf('%0.0f',ncdata.gsetts.window_length)) 
+        sprintf('%0.0f',ncdata.gsetts.window_length))
     gdata.maxGap=ncdata.gsetts.max_interp_dist;
 else
     gdata.cdata=[];
@@ -643,7 +643,7 @@ end
 %     guidata(hfig,gdata)
 %     applyppk(hfig)
 %     gdata=guidata(hfig);
-% else 
+% else
 %     if isfield(gdata.info,'ppk_filename')
 %         gdata.info=rmfield(gdata.info,'ppk_filename');
 %     end
@@ -671,7 +671,7 @@ if ~isempty(gdata.cdata)
     gdata.gg=plot(gdata.bdata.distance,...
         gdata.cdata.zc,'r-','linewidth',2);
     gdata.flag=zeros(length(gdata.cdata.zc),1);
-else 
+else
     gdata.flag=[];
 end
 
@@ -687,7 +687,7 @@ set(gca,'xlim',gdata.xlimo,...
 
 
 if ~isempty(gdata.cdata)
-   
+    
     switch ncdata.gsetts.smoothing_type
         case 'mean'
             gdata.fType='mean';
@@ -707,7 +707,7 @@ if ~isempty(gdata.cdata)
     set(gdata.edit3,'string',...
         sprintf('%0.0f',ncdata.gsetts.fstrength))
     set(gdata.edit4,'string',...
-        sprintf('%0.0f',ncdata.gsetts.window_length)) 
+        sprintf('%0.0f',ncdata.gsetts.window_length))
     gdata.maxGap=ncdata.gsetts.max_interp_dist;
 end
 
@@ -809,7 +809,8 @@ opts={'filename',   [],     {'char'},    {};...
     'hdr',          [],     {'struct'},  {};...
     'bindata',      [],     {'struct'},  {};...
     'readbin',      1,      {'numeric'}, {};...
-    'info',         [],     {'struct'},  {}};
+    'info',         [],     {'struct'},  {};...
+    'sv',           []      {'struct'},  {}};
 
 cellfun(@(x)(p.addParamValue(x{1},x{2},...
     @(y)(validateattributes(y, x{3},x{4})))),num2cell(opts,2));
@@ -833,7 +834,7 @@ if all([isempty(opt.filename);...
         return
     else
         opt.filename=[dname,fname];
-    end 
+    end
 else
     if isempty(opt.filename)
         opt.filename=opt.bdata.filename;
@@ -904,20 +905,20 @@ end
 %now the stuff in the hypack header
 %hypack version
 netcdf.putAtt(ncid,gp,...
-    'hypack_version',opt.hdr.hypack_ver); 
+    'hypack_version',opt.hdr.hypack_ver);
 %raw filename
 netcdf.putAtt(ncid,gp,...
     'raw_filename',opt.bdata.filename);
 %Line Number
 netcdf.putAtt(ncid,gp,...
-    'line_number',opt.hdr.lineNum); 
+    'line_number',opt.hdr.lineNum);
 %Line Coordinates
 netcdf.putAtt(ncid,gp,...
-    'line_x',opt.hdr.linex); 
+    'line_x',opt.hdr.linex);
 netcdf.putAtt(ncid,gp,...
-    'line_y',opt.hdr.liney); 
+    'line_y',opt.hdr.liney);
 %coordinate system
-if hdr_coord
+if hdr_coord %hypack coord system info not necessarily correct if ppk is applied
     netcdf.putAtt(ncid,gp,...
         'ellipsoid',opt.hdr.ellipsoid{1});
     netcdf.putAtt(ncid,gp,...
@@ -953,7 +954,7 @@ if isfield(opt.rdata,'antenna_offset')
     offset=unique(opt.rdata.antenna_offset);
     offset=offset(isfinite(offset));
     netcdf.putAtt(ncid,gp,...
-    'gps_antenna_offset',offset);
+        'gps_antenna_offset',offset);
 end
 
 
@@ -988,9 +989,9 @@ end
 
 %sonar data
 if ~isempty(opt.bindata)
-     [junk,ia,ib] = intersect(opt.bdata.vtime,...
-            opt.bindata.vtime);%#ok
-        
+    [junk,ia,ib] = intersect(opt.bdata.vtime,...
+        opt.bindata.vtime);%#ok
+    
     
     opt.bdata.mtime=opt.bdata.mtime(ia);
     opt.bdata.vtime=opt.bdata.vtime(ia);
@@ -1032,7 +1033,7 @@ for i=1:size(sfields,1)
     end
 end
 %raw data fields
-if ~isempty(opt.bindata)   
+if ~isempty(opt.bindata)
     %define the raw data dimension
     depthdim=netcdf.defDim(sonar,'depth',numel(opt.bindata.range));
     varid=netcdf.defVar(sonar,'ping_num','double',...
@@ -1076,6 +1077,7 @@ if ~isempty(opt.fdata)
         'max_interp_dist','maxgap'};
 end
 
+
 %def. variables
 for i=1:length(bfields)
     if isfield(opt.bdata,bfields{i,1})
@@ -1093,6 +1095,25 @@ for i=1:length(bfields)
         end
     end
 end
+
+if ~isempty(opt.sv) %if svel cast exists
+    svel=netcdf.defGrp(ncid,'svel');
+    sveldim=netcdf.defDim(svel,'cast_depth',numel(opt.sv.depth));
+    
+    svfields={'depth','depth','cast water depth','meters';...
+        'sos','svel','sound velocity','m/s'};
+    %to do - add cast coordinates, not sure if using avg of mutilple
+    %casts
+    
+    for i=1:size(svfields,1)
+        if isfield(opt.sv,svfields{i,1})
+            varid=netcdf.defVar(svel,svfields{i,2},'double',sveldim);
+            netcdf.putAtt(svel,varid,'long_name',svfields{i,3});
+            netcdf.putAtt(svel,varid,'units',svfields{i,4});
+        end
+    end
+end
+
 netcdf.endDef(ncid);
 
 %write gps data
@@ -1114,13 +1135,13 @@ for i=1:nvars
 end
 if ~isempty(opt.bindata)
     if numel(opt.bindata.vtime)>numel(opt.bdata.mtime);
-    
+        
         ind=find(opt.bindata.vtime>=min(opt.bdata.vtime) & ...
             opt.bindata.vtime<=max(opt.bdata.vtime));
     else
         ind=1:numel(opt.bindata.vtime);
     end
-
+    
     varid=netcdf.inqVarID(sonar,'ping_num');
     netcdf.putVar(sonar,varid,(1:numel(ind))')
     
@@ -1131,7 +1152,7 @@ if ~isempty(opt.bindata)
     netcdf.putVar(sonar,varid,opt.bindata.range)
 end
 
-    
+
 
 
 
@@ -1146,10 +1167,21 @@ for i=1:nvars
         if isempty(opt.bdata.(bfields{midx,1}));
             opt.bdata.(bfields{midx,1})=opt.bdata.mtime.*NaN;
         end
-        netcdf.putVar(bathy,i-1,opt.bdata.(bfields{midx,1})); 
+        netcdf.putVar(bathy,i-1,opt.bdata.(bfields{midx,1}));
     end
 end
 
+
+
+%write svel data
+if ~isempty(opt.sv)
+    [~,nvars]=netcdf.inq(svel);
+    for i=1:nvars
+        varname=netcdf.inqVar(svel,i-1);
+        midx=find(strcmpi(varname,svfields(:,2)));
+        netcdf.putVar(svel,i-1,opt.sv.(svfields{midx,1})); %#ok
+    end
+end
 
 
 netcdf.close(ncid);
@@ -1198,10 +1230,10 @@ for i=1:length(grps);
     
     
 end
-    
+
 data.gatts=gatts;
 netcdf.close(ncid);
-    
+
 end
 
 %%%%-----------------------------------------------------------------------
@@ -1212,15 +1244,15 @@ function bindata = readBinSolo(fname)
 %   containing raw waveform acoustic data from a single-
 %   beam echosounder recorded with HYPACK. A .RAW file with
 %   the same name must be present in the same directory
-%   as the .BIN file. The code is currently only configured 
+%   as the .BIN file. The code is currently only configured
 %   for a single-frequency sonar system.
 %
 %   INPUTS: Two optional input arguements are available
 %       filename - If a string is among the input arguments,
-%                  the program will use this as the file to 
+%                  the program will use this as the file to
 %                   process.  If no filename is provided,
 %                   the user will be prompted to select a file.
-%       plotflag - 0 (default) or 1. If plotflag is set to 1, 
+%       plotflag - 0 (default) or 1. If plotflag is set to 1,
 %                  a simple plot will be made.
 %
 %   OUTPUT: The data are returned in a structure with
@@ -1257,7 +1289,7 @@ function bindata = readBinSolo(fname)
 
 % h=waitbar(0);
 
-% 
+%
 % set(h,'name','Reading .BIN file');
 
 fid=fopen(fname,'r');
@@ -1302,29 +1334,29 @@ while pos<numbytes
     
     bindata.vtime(numread)=timer;
     bindata.vals(:,numread)=samp;
-
+    
     
     numread=numread+1;
     pos=ftell(fid);
     
-%     waitbar(pos/numbytes,h,sprintf('%d%% complete...',...
-%         round((pos/numbytes)*100)));
+    %     waitbar(pos/numbytes,h,sprintf('%d%% complete...',...
+    %         round((pos/numbytes)*100)));
     
 end
 fclose(fid);
 
 
 if (numel(unique(sw))>1 || numel(unique(eos))>1);
-%     set(h,'name','Processing Bin File.');
+    %     set(h,'name','Processing Bin File.');
     rangei=linspace(min(eos)-max(sw),...
         max(eos),num_samp);
     
     for i = 1:numread-1;
         bindata.vals(:,i)=interp1(bindata.range(:,i),...
             bindata.vals(:,i),rangei);
-           
-%         waitbar(i/(numread-1),h,sprintf('%d%% complete...',...
-%                 round((i/(numread-1))*100)));
+        
+        %         waitbar(i/(numread-1),h,sprintf('%d%% complete...',...
+        %                 round((i/(numread-1))*100)));
     end
     bindata.range=rangei;
 else
@@ -1333,9 +1365,9 @@ end
 % close(h);
 end
 %%%%----------------------------------------------------------------------
-function gdata=nc2tv_struct(ncfile) 
+function gdata=nc2tv_struct(ncfile)
 %this function imports data from netcdf into data structures
-%consistent with transectviewer. 
+%consistent with transectviewer.
 
 ncdata=rawnc2mat(ncfile);
 
@@ -1389,7 +1421,7 @@ if isfield(ncdata.bathy,'zf')
     cdata.lat=ncdata.bathy.latitude;
     cdata.lon=ncdata.bathy.longitude;
     cdata.zc=ncdata.bathy.zf;
-     cdata.mtime=ncdata.bathy.mtime;
+    cdata.mtime=ncdata.bathy.mtime;
     gsetts=ncdata.bathy.vatts.zf;
 end
 
@@ -1402,15 +1434,15 @@ if isfield(ncdata.gatts,'ellipsoid')
         sprintf('%0.9f',ncdata.gatts.inverse_flattening)};
 end
 if isfield(ncdata.gatts,'projection')
-hdr.projection={ncdata.gatts.projection,...
-    sprintf('%0.6f',ncdata.gatts.reference_lon),...
-    sprintf('%0.6f',ncdata.gatts.scale_factor),...
-    sprintf('%0.6f',ncdata.gatts.reference_lat),...
-    sprintf('%0.6f',ncdata.gatts.north_parallel),...
-    sprintf('%0.6f',ncdata.gatts.south_parallel),...
-    sprintf('%0.4f',ncdata.gatts.false_easting),...
-    sprintf('%0.4f',ncdata.gatts.false_northing)};
-hdr.orthometric_height_corr=ncdata.gatts.orthometric_height_corr;
+    hdr.projection={ncdata.gatts.projection,...
+        sprintf('%0.6f',ncdata.gatts.reference_lon),...
+        sprintf('%0.6f',ncdata.gatts.scale_factor),...
+        sprintf('%0.6f',ncdata.gatts.reference_lat),...
+        sprintf('%0.6f',ncdata.gatts.north_parallel),...
+        sprintf('%0.6f',ncdata.gatts.south_parallel),...
+        sprintf('%0.4f',ncdata.gatts.false_easting),...
+        sprintf('%0.4f',ncdata.gatts.false_northing)};
+    hdr.orthometric_height_corr=ncdata.gatts.orthometric_height_corr;
 end
 if isfield(ncdata.gatts,'geoid')
     hdr.geoid=ncdata.gatts.geoid;
@@ -1452,7 +1484,7 @@ params={'project';...
     'xducer_pitch_applied_deg'};
 for i=1:length(params)
     if isfield(ncdata.gatts,params{i})
-    info.(params{i})=ncdata.gatts.(params{i});
+        info.(params{i})=ncdata.gatts.(params{i});
     end
 end
 
@@ -1463,18 +1495,32 @@ if isfield(ncdata.sonar,'amplitude')
     bindata.vals=ncdata.sonar.amplitude;
 end
 
-    
+
 %speed of sound corrections
 if isfield(ncdata.gatts,'orig_speed_of_sound');
-    sos_corr.sos_old=ncdata.gatts.orig_speed_of_sound;
-    sos_corr.sos_new=ncdata.gatts.orig_speed_of_sound;
-    sos_corr.ratio=1;
+    sv.sos_orig=str2double(ncdata.gatts.orig_speed_of_sound);
 end
 if isfield(ncdata.gatts,'applied_speed_of_sound');
-    sos_corr.sos_new=...
-        ncdata.gatts.applied_speed_of_sound;
-    sos_corr.ratio=sos_corr.sos_new./...
-       sos_corr.sos_old;
+    if strcmpi(ncdata.gatts.applied_speed_of_sound,'profile')
+        sv.depth=ncdata.svel.depth;
+        sv.sos=ncdata.svel.svel;
+        sv.mean_vel=mean(sv.sos);
+        sv.use_prof=1;
+        sv.use_mean_sos=0;
+    else
+        if isfield(ncdata,'svel')
+            sv.depth=ncdata.svel.depth;
+            sv.sos=ncdata.svel.svel;
+        else
+            sv.depth=[];
+            sv.sos=[];
+        end
+        sv.mean_vel=str2double(ncdata.gatts.applied_speed_of_sound);
+        sv.use_prof=0;
+        sv.use_mean_sos=1;
+    end
+    
+    
 end
 
 
@@ -1497,6 +1543,9 @@ end
 if exist('cdata','var')
     gdata.cdata=cdata;
     gdata.gsetts=gsetts;
+end
+if exist('sv','var');
+    gdata.sv=sv;
 end
 
 end
@@ -1582,7 +1631,7 @@ if ~isempty(gdata.flag);
     end
     if isfield(gdata,'gg')
         
-    set(gdata.gg,'xdata',gdata.bdata.adist);
+        set(gdata.gg,'xdata',gdata.bdata.adist);
     end
 end
 
@@ -1632,7 +1681,7 @@ set(get(gdata.ax1,'ylabel'),'string','Elevation (m)')
 
 if ~isempty(gdata.flag);
     if isfield(gdata,'bb')
-    set(gdata.bb,'xdata',gdata.bdata.distance(gdata.flag==1));
+        set(gdata.bb,'xdata',gdata.bdata.distance(gdata.flag==1));
     end
     set(gdata.gg,'xdata',gdata.bdata.distance);
 end
@@ -1784,10 +1833,10 @@ if ppkd.ftype==1
     set(ppkd.date,'enable','off')
     set(ppkd.changedate,'enable','off');
 else
-       set(ppkd.date,'enable','on')
-    set(ppkd.changedate,'enable','on'); 
+    set(ppkd.date,'enable','on')
+    set(ppkd.changedate,'enable','on');
 end
-    
+
 
 set(ppkd.done,'enable','on')
 
@@ -1868,16 +1917,16 @@ for i=1:length(codes);
         switch codes{i}
             case '$GPRMC'
                 %time
-                 times=cellfun(@(x)(str2double(x{1})),r);
-                 
-                 hr=fix(times./10000);
-                 minute=fix((times-(hr*10000))/100);
-                 sec=times-(hr*10000+minute*100);
-                 
-                 
-                 dempty=cellfun(@(x)(isempty(x{6})),r);
-                 r{dempty}{6}='000000';
-                 
+                times=cellfun(@(x)(str2double(x{1})),r);
+                
+                hr=fix(times./10000);
+                minute=fix((times-(hr*10000))/100);
+                sec=times-(hr*10000+minute*100);
+                
+                
+                dempty=cellfun(@(x)(isempty(x{6})),r);
+                r{dempty}{6}='000000';
+                
                 dates=cellfun(@(x)(textscan(char(x{6}),...
                     '%2.0f%2.0f%2.0f')),r,'un',0);
                 dmat=cell2mat(fliplr(cat(1,dates{:})));
@@ -2308,8 +2357,8 @@ if gdata.ppk_info.use_ellipsoid==1
     end
 end
 
-% 
-% 
+%
+%
 % ptime=gdata.rdata.gpsTime;
 % for i=1:size(fields,1)
 %     gdata.rdata.(fields{i,1})=interp1(gdata.ppk.mtime,...
@@ -2376,33 +2425,52 @@ end
 
 
 gdata.bdata.tide=interp1(btime,gdata.rdata.tide(bind),gdata.bdata.vtime);
-if isfield(gdata,'sos_corr');
-    if numel(gdata.sos_corr.ratio)>1 %bug fix for old files
-        gdata.sos_corr.ratio=str2double(gdata.sos_corr.sos_new)./...
-            str2double(gdata.sos_corr.sos_old);
+
+if isfield(gdata,'sv')
+    if gdata.invert==1
+        zraw=-gdata.bdata.zraw;
+    end
+    zsos=apply_sos_prof(zraw,gdata.sv.sos_orig,...
+        [gdata.sv.depth gdata.sv.sos],gdata.sv.use_mean_sos,...
+        gdata.sv.mean_vel)-gdata.manoff;
+    if gdata.invert==1
+        zsos=-zsos;
     end
     
-    zsos=(gdata.bdata.zraw.*gdata.sos_corr.ratio)-gdata.manoff;
     gdata.bdata.zc=zsos-gdata.bdata.tide;
+    gdata.info.orig_speed_of_sound=sprintf('%0.1f',...
+        gdata.sv.sos_orig);
+    if gdata.sv.use_mean_sos
+        gdata.info.applied_speed_of_sound=sprintf('%0.1f',...
+            gdata.sv.mean_vel);
+    else
+        gdata.info.applied_speed_of_sound='Profile';
+    end
+    
+    
+    
 else
     gdata.bdata.zc=(gdata.bdata.zraw-gdata.manoff)-...
         gdata.bdata.tide;
 end
 
-
+gdata.xlimo=[min(gdata.bdata.distance),...
+    max(gdata.bdata.distance)];
+gdata.ylimo=[min(gdata.bdata.zc),...
+    max(gdata.bdata.zc)];
 
 %update the view
 hold off
 if gdata.alongflag==1
-    gdata.l1=plot(gdata.bdata.adist,gdata.bdata.zc);
-    hold on
-    
-else
-    
-    gdata.l1=plot(gdata.bdata.distance,gdata.bdata.zc);
-    hold on
+    gdata.alongflag=0;
 end
-set(gca,'xlim',gdata.xlims,'ylim',gdata.ylims);
+
+
+
+gdata.l1=plot(gdata.bdata.distance,gdata.bdata.zc);
+hold on
+
+set(gca,'xlim',gdata.xlimo,'ylim',gdata.ylimo);
 
 
 if isfield(gdata,'gg')
@@ -2439,8 +2507,8 @@ radiobutton3 = uicontrol(appk.bg1,'style','radiobutton',...
 
 if isfield(gdata,'applyppk')
     switch gdata.applyppk
-    case 0
-        set(appk.bg1,'selectedobject',radiobutton1)
+        case 0
+            set(appk.bg1,'selectedobject',radiobutton1)
         case 1
             set(appk.bg1,'selectedobject',radiobutton2)
         case 2
@@ -2604,8 +2672,8 @@ function ini=read_info(varargin)
 
 if nargin>0
     fname=varargin{1};
-    if ~exist(fname,'file')    
-    error('File not found.')
+    if ~exist(fname,'file')
+        error('File not found.')
     end
 else
     [filename, pathname] = uigetfile( ...
@@ -2663,17 +2731,17 @@ for i=1:length(names);
                 case '%f'
                     ini.(names{i})=data2{:};
             end
-                    
+            
         else
             ini.(names{i})=[];
         end
     else
         errordlg(sprintf('Unknown keyword encountered: %s',...
-            names{i}),'modal');       
+            names{i}),'modal');
         error('ASTEVENS:read_ini:badString',...
             'Unknown keyword encountered: %s',...
             names{i})
-
+        
     end
 end
 
@@ -2701,15 +2769,20 @@ if isfield(gdata,'info')
     end
 end
 
-if isfield(gdata,'sos_corr')
-if ~isempty(gdata.sos_corr)
-    info.applied_speed_of_sound=gdata.sos_corr.sos_new;
-end
+if isfield(gdata,'sv')
+    if ~isempty(gdata.sv)
+        if gdata.sv.use_mean_sos
+            info.applied_speed_of_sound=sprintf('%0.1f',...
+                gdata.sv.mean_vel);
+        else
+            info.applied_speed_of_sound='Profile';
+        end
+    end
 end
 
-info.tv_ver=gdata.tv_ver; 
+info.tv_ver=gdata.tv_ver;
 gdata.info=info;
-guidata(hfig,gdata) 
+guidata(hfig,gdata)
 show_meta_info(hfig);
 
 set(gdata.showmeta,'visible','on')
@@ -2872,9 +2945,9 @@ if isempty(gdata.bindata);
             
             minz=find(ia==1,1,'first');
             if ~isempty(minz)
-            for i=1:length(gdata.numedits)
-                gdata.edits{i}=gdata.edits{i}-(minz-1);
-            end
+                for i=1:length(gdata.numedits)
+                    gdata.edits{i}=gdata.edits{i}-(minz-1);
+                end
             end
         end
         gdata.bindata.vtime=gdata.bindata.vtime(ib);
@@ -3060,7 +3133,7 @@ gdata.told=get(gdata.text1,'string');
 set(gdata.text1,'string',...
     'Click and drag to measure distance',...
     'visible','on');
-        
+
 
 waitforbuttonpress;
 
@@ -3089,8 +3162,8 @@ gdata=guidata(hfig);
 mousenew = get(gdata.ax,'CurrentPoint');
 gdata.xy2 = mousenew(1,1:2);
 
-xd = gdata.xy2(1) - gdata.xy1(1); 
-yd = gdata.xy2(2) - gdata.xy1(2); 
+xd = gdata.xy2(1) - gdata.xy1(1);
+yd = gdata.xy2(2) - gdata.xy1(2);
 dist=sqrt(xd.*xd +yd.*yd)';
 
 
@@ -3098,7 +3171,7 @@ dist=sqrt(xd.*xd +yd.*yd)';
 if isfield(gdata,'m1')
     set(gdata.m1,'xdata',[gdata.xy1(1) gdata.xy2(1)],...
         'ydata',[gdata.xy1(2) gdata.xy2(2)]);
-   
+    
     
 else
     gdata.m1=line([gdata.xy1(1) gdata.xy2(1)],...
@@ -3110,7 +3183,7 @@ end
 
 set(gdata.text1,'string',sprintf(['dx = %.2f, ',...
     'dy = %0.2f ,distance = %0.2f'],...
-     xd,yd,dist));
+    xd,yd,dist));
 
 guidata(hfig,gdata)
 end
@@ -3402,57 +3475,66 @@ end
 
 set(gdata.edit1,'string',num2str(gdata.pointer));
 
-% 
+%
 % try
-    
+
+if gdata.invert==1
+    [gdata.bdata,gdata.hdr,gdata.rdata]=readRAW(...
+        'filename',[gdata.filepath,gdata.fnames{gdata.newInd}],...
+        'invert','minz',gdata.minz,'maxz',gdata.maxz,...
+        'maxoffset',gdata.maxoffset);
+else
+    [gdata.bdata,gdata.hdr,gdata.rdata]=readRAW(...
+        'filename',[gdata.filepath,gdata.fnames{gdata.newInd}],...
+        'minz',gdata.minz,'maxz',gdata.maxz,...
+        'maxoffset',gdata.maxoffset);
+end
+
+%deal with tide options
+gdata.tideopt.badtide=[];
+guidata(hfig,gdata);
+applytidecorr(hfig);
+gdata=guidata(hfig);
+
+hold off
+if isfield(gdata.bdata,'zc')==0
+    gdata.bdata.zc=gdata.bdata.zraw;
+    gdata.bdata.tide=zeros(size(gdata.bdata.zraw));
+    gdata.rdata.tide=zeros(size(gdata.rdata.antennaH));
+end
+
+if isfield(gdata,'sv');
     if gdata.invert==1
-        [gdata.bdata,gdata.hdr,gdata.rdata]=readRAW(...
-            'filename',[gdata.filepath,gdata.fnames{gdata.newInd}],...
-            'invert','minz',gdata.minz,'maxz',gdata.maxz,...
-            'maxoffset',gdata.maxoffset);
-    else
-        [gdata.bdata,gdata.hdr,gdata.rdata]=readRAW(...
-            'filename',[gdata.filepath,gdata.fnames{gdata.newInd}],...
-            'minz',gdata.minz,'maxz',gdata.maxz,...
-            'maxoffset',gdata.maxoffset);
+        zraw=-gdata.bdata.zraw;
+    end
+    zsos=apply_sos_prof(zraw,gdata.sv.sos_orig,...
+        [gdata.sv.depth gdata.sv.sos],gdata.sv.use_mean_sos,...
+        gdata.sv.mean_vel)-gdata.manoff;
+    if gdata.invert==1
+        zsos=-zsos;
     end
     
-    %deal with tide options
-    gdata.tideopt.badtide=[];
-    guidata(hfig,gdata);
-    applytidecorr(hfig);
+    gdata.bdata.zc=zsos-gdata.bdata.tide;
+else
+    gdata.bdata.zc=(gdata.bdata.zraw-gdata.manoff)-...
+        gdata.bdata.tide;
+end
+
+%what about using ppk GPS
+if gdata.applyppk==2
+    if isfield(gdata.info,'ppk_filename')
+        gdata.info=rmfield(gdata.info,'ppk_filename');
+    end
+    guidata(hfig,gdata)
+    applyppk(hfig)
     gdata=guidata(hfig);
-    
-    hold off
-    if isfield(gdata.bdata,'zc')==0
-        gdata.bdata.zc=gdata.bdata.zraw;
-        gdata.bdata.tide=zeros(size(gdata.bdata.zraw));
-        gdata.rdata.tide=zeros(size(gdata.rdata.antennaH));
+else
+    if isfield(gdata.info,'ppk_filename')
+        gdata.info=rmfield(gdata.info,'ppk_filename');
     end
-    
-    if isfield(gdata,'sos_corr');
-        zsos=(gdata.bdata.zraw.*gdata.sos_corr.ratio)-gdata.manoff;
-        gdata.bdata.zc=zsos-gdata.bdata.tide;
-    else
-        gdata.bdata.zc=(gdata.bdata.zraw-gdata.manoff)-...
-            gdata.bdata.tide;
-    end
-    
-    %what about using ppk GPS
-    if gdata.applyppk==2
-        if isfield(gdata.info,'ppk_filename')
-            gdata.info=rmfield(gdata.info,'ppk_filename');
-        end
-        guidata(hfig,gdata)
-        applyppk(hfig)
-        gdata=guidata(hfig);
-    else
-        if isfield(gdata.info,'ppk_filename')
-            gdata.info=rmfield(gdata.info,'ppk_filename');
-        end
-        gdata.applyppk=0;
-    end
-    
+    gdata.applyppk=0;
+end
+
 
 
 if isfield(gdata.bdata,'tide')
@@ -3498,7 +3580,7 @@ guidata(hfig,gdata)
 %         num2str(gdata.pointer),' of ',...
 %         num2str(length(gdata.fnames)),' - '...
 %         gdata.fnames{gdata.newInd}];
-%     
+%
 %     set(gdata.text1,'string',txtstr,'foregroundcolor','r');
 % end
 
@@ -3864,16 +3946,16 @@ drawnow
 [mdata,meta]=read_meta([pathname, filename]);
 metatime=cellstr(datestr([mdata.Year,mdata.Month,...
     mdata.Day,mdata.Hour,mdata.Minute,mdata.Second],31));
-% 
+%
 % if ~isfield(gdata,'sos_corr');
 %     gdata.sos_corr.ratio=1;
 % else
 %     gdata.sos_corr.sos_old=str2double(meta.speed_of_sound);
 % end
-% 
-% 
-% 
-% 
+%
+%
+%
+%
 % gdata.info.vessel=meta.vessel_id;
 % gdata.info.vessel_op=meta.vessel_operator;
 % gdata.info.echosounder=meta.echosounder_type;
@@ -4111,7 +4193,7 @@ gd2.nclist = uicontrol(hf2,'style','listbox',...
     'position',[0.396 0.203 0.52 0.515],...
     'string','No files selected',...
     'backgroundcolor',[1 1 1]);
- uicontrol(hf2,'style','pushbutton',...
+uicontrol(hf2,'style','pushbutton',...
     'units','normalized',...
     'position',[0.0842 0.621 0.253 0.0975],...
     'string','Open .nc files',...
@@ -4663,7 +4745,7 @@ function export6(hfig,evnt,varargin) %#ok
 gdata=guidata(hfig);
 
 if isempty(varargin)
-
+    
     namer=strtok(gdata.bdata.filename,'.');
     [filename, pathname] = uiputfile( ...
         {'*.nc', 'netCDF Files'}, ...
@@ -4677,7 +4759,7 @@ if isempty(varargin)
         opt.outfile=[pathname,filename];
     end
 else
-   opt.outfile=varargin{1};
+    opt.outfile=varargin{1};
 end
 
 
@@ -4719,6 +4801,9 @@ if ~isempty(gdata.cdata)==1
     opt.fdata.zf=gdata.cdata.zc;
 end
 
+if isfield(gdata,'sv')
+    opt.sv=gdata.sv;
+end
 
 raw2nc(opt);
 
@@ -5010,19 +5095,29 @@ if gdata.numedits>0
         gdata.eraw(gdata.edits{gdata.numedits});
     
     
-    if isfield(gdata,'sos_corr');
+    if isfield(gdata,'sv');
+        if gdata.invert==1
+            zraw=-gdata.bdata.zraw;
+        end
+        zsos=apply_sos_prof(zraw,gdata.sv.sos_orig,...
+            [gdata.sv.depth gdata.sv.sos],gdata.sv.use_mean_sos,...
+            gdata.sv.mean_vel)-gdata.manoff;
+        if gdata.invert==1
+            zsos=-zsos;
+        end
         
+        gdata.bdata.zc=zsos-gdata.bdata.tide;
         gdata.bdata.zc(gdata.edits{gdata.numedits})=...
-            ((gdata.bdata.zraw(gdata.edits{gdata.numedits})-...
-            gdata.manoff)-gdata.bdata.tide(gdata.edits{gdata.numedits})).*...
-            gdata.sos_corr.ratio;
+            zsos(gdata.edits{gdata.numedits})-...
+            gdata.bdata.tide(gdata.edits{gdata.numedits});
+        
     else
         gdata.bdata.zc(gdata.edits{gdata.numedits})=...
             (gdata.bdata.zraw(gdata.edits{gdata.numedits})-...
             gdata.manoff)-...
             gdata.bdata.tide(gdata.edits{gdata.numedits});
     end
-
+    
     
     gdata.edits(gdata.numedits)=[];
     gdata.numedits=gdata.numedits-1;
@@ -5242,20 +5337,24 @@ if isempty(gdata.tcorr)~=1
     data{len1+1,2}=sprintf('%0.2f',gdata.tcorr);
 end
 
-if isfield(gdata,'sos_corr')
+if isfield(gdata,'sv')
     len1=length(data);
     data{len1+1,1}='Original Speed of Sound (m/s)';
-    if ischar(gdata.sos_corr.sos_old)
-        data{len1+1,2}=gdata.sos_corr.sos_old;
+    if ischar(gdata.sv.sos_orig)
+        data{len1+1,2}=gdata.sv.sos_orig;
     else
-        data{len1+1,2}=sprintf('%0.2f',gdata.sos_corr.sos_old);
+        data{len1+1,2}=sprintf('%0.2f',gdata.sv.sos_orig);
     end
     
     data{len1+2,1}='Speed of Sound Applied (m/s)';
-    if ischar(gdata.sos_corr.sos_new)
-        data{len1+2,2}=gdata.sos_corr.sos_new;
+    if gdata.sv.use_mean_sos
+        if ischar(gdata.sv.mean_vel)
+            data{len1+2,2}=gdata.sv.mean_vel;
+        else
+            data{len1+2,2}=sprintf('%0.2f',gdata.sv.mean_vel);
+        end
     else
-        data{len1+2,2}=sprintf('%0.2f',gdata.sos_corr.sos_new);
+        data{len1+2,2}='Profile';
     end
 end
 
@@ -5431,9 +5530,19 @@ gdata.manoff=str2double(answer{:});
 
 %apply manual offset
 
-if isfield(gdata,'sos_corr');
-    zsos=(gdata.bdata.zraw-gdata.manoff).*gdata.sos_corr.ratio;
+if isfield(gdata,'sv');
+    if gdata.invert==1
+        zraw=-gdata.bdata.zraw;
+    end
+    zsos=apply_sos_prof(zraw,gdata.sv.sos_orig,...
+        [gdata.sv.depth gdata.sv.sos],gdata.sv.use_mean_sos,...
+        gdata.sv.mean_vel)-gdata.manoff;
+    if gdata.invert==1
+        zsos=-zsos;
+    end
+    
     gdata.bdata.zc=zsos-gdata.bdata.tide;
+    
 else
     gdata.bdata.zc=(gdata.bdata.zraw-gdata.manoff)-...
         gdata.bdata.tide;
@@ -5452,6 +5561,7 @@ else
     %update plot
     if gdata.rawflag~=1;
         set(gdata.l1,'ydata',gdata.bdata.zc)
+        set(gdata.ax,'ylim',gdata.ylimo)
     end
     guidata(hfig,gdata);
     
@@ -5543,176 +5653,491 @@ end
 
 
 %%%%-----------------------------------------------------------------------
-function run_sos_gui(hfig,evnt,hand) %#ok
+function run_sos_gui(hfig,evnt) %#ok
+
 gdata=guidata(hfig);
 
-gdata.sos_corr=sos_gui;
+if isfield(gdata,'sv')
+    gdata.sv=sos_gui(gdata.sv);
+else
+    gdata.sv=sos_gui;
+end
 
-
-if ~isempty(gdata.sos_corr)
-    zsos=(gdata.bdata.zraw-gdata.manoff).*gdata.sos_corr.ratio;
+if ~isempty(gdata.sv)
+    if gdata.invert==1
+        zraw=-gdata.bdata.zraw;
+    end
+    
+    zsos=apply_sos_prof(zraw,gdata.sv.sos_orig,...
+        [gdata.sv.depth gdata.sv.sos],gdata.sv.use_mean_sos,...
+        gdata.sv.mean_vel)-gdata.manoff;
+    
+    
+    if gdata.invert==1
+        zsos=-zsos;
+    end
+    
     gdata.bdata.zc=zsos-gdata.bdata.tide;
     gdata.info.orig_speed_of_sound=sprintf('%0.1f',...
-        gdata.sos_corr.sos_old);
-    gdata.info.applied_speed_of_sound=sprintf('%0.1f',...
-        gdata.sos_corr.sos_new);
+        gdata.sv.sos_orig);
+    if gdata.sv.use_mean_sos
+        gdata.info.applied_speed_of_sound=sprintf('%0.1f',...
+            gdata.sv.mean_vel);
+    else
+        gdata.info.applied_speed_of_sound='Profile';
+    end
     
     gdata.ylimo=[min(gdata.bdata.zc),...
         max(gdata.bdata.zc)];
+    
     
     if ~isempty(gdata.cdata)
         guidata(hfig,gdata);
         xyzFilt(hfig);
     else
-        set(gdata.l1,'ydata',gdata.bdata.zc);
-        guidata(hfig,gdata);
+        if gdata.rawflag==0
+            set(gdata.l1,'ydata',gdata.bdata.zc);
+            guidata(hfig,gdata);
+        end
+    end
+    guidata(hfig,gdata);
+
+end
+
+
+end
+
+function zsos=apply_sos_prof(zraw,osv,sosp,usemean,meanvel)
+%zraw - raw depths
+%osv - original sound velocity
+%sosp - m x 2 matrix with col 1=depths, col2 = sos
+%usemean - flag 0 = use profile, 1 = use single mean val
+%meanvel - mean sos (m/s)
+
+if ~usemean
+    T=((2.*zraw)./osv)./2;
+    ptime= diff([0;sosp(:,1)])./sosp(:,2);
+    
+    tedges=[0;cumsum(ptime);inf];
+    dedges=[0;sosp(:,1)];
+    sedges=[sosp(:,2);sosp(end,2)];
+    [~,bin]=histc(T,tedges);
+    zsos=nan(numel(zraw),1);
+    zsos(bin~=0)=dedges(bin(bin~=0))+...
+        ((T(bin~=0)-tedges(bin(bin~=0))).*sedges(bin(bin~=0)));
+else
+    ratio=meanvel/osv;
+    zsos= zraw.*ratio;
+end
+
+
+end
+
+
+function sv = sos_gui(varargin)
+% The basic layout of this GUI was made with the help of guidegetter,
+% available on the File Exchange at Mathworks.com
+
+if nargin>0
+    gd.sv=varargin{1};
+    data=cell(length(gd.sv.depth),2);
+    if ~isempty(gd.sv.depth)
+        data(:,1)=cellfun(@(x)(sprintf('%0.2f',x)),...
+            num2cell(gd.sv.depth),'un',0);
+        data(:,2)=cellfun(@(x)(sprintf('%0.2f',x)),...
+            num2cell(gd.sv.sos),'un',0);  
+        list_enable='on';
+    else
+        data=cell(20,2);
+        list_enable='off';
     end
     
 else
-    gdata=rmfield(gdata,'sos_corr');
-    guidata(hfig,gdata);
-end
-
-
-
-end
-%%%%-----------------------------------------------------------------------
-function sos_corr=sos_gui(varargin)
-
-error(nargchk(0,3,nargin,'struct'));
-sos_old=sprintf('%0.1f',1500);
-temp='';
-sal='';
-
-
-if nargin==1;
-    sos_old=sprintf('%0.1f',varargin{1});
-elseif nargin==2
-    sos_old=sprintf('%0.1f',varargin{1});
-    sal=sprintf('%0.1f',varargin{2});
-elseif nargin==3
-    sos_old=sprintf('%0.1f',varargin{1});
-    sal=sprintf('%0.1f',varargin{2});
-    temp=sprintf('%0.1f',varargin{3});
+    gd.sv.depth=[];
+    gd.sv.sos=[];
+    gd.sv.time=[];
+    gd.sv.sos_orig=1500;
+    gd.sv.use_mean_sos=0;
+    gd.sv.use_prof=1;
+    gd.sv.mean_vel=[];
+    
+    list_enable='off';
+    data=cell(20,2);
 end
 
 
 hf = figure('units','normalized',...
-    'position',[0.36 0.614 0.17 0.274],...
-    'menubar','none','name','sos_gui',...
-    'numbertitle','off','color','w');
+    'position',[0.354 0.491 0.293 0.414],...
+    'menubar','none',...
+    'name','sos_gui',...
+    'numbertitle','off',...
+    'color',[0.94 0.94 0.94]);
 
 uicontrol(hf,'style','text',...
     'units','normalized',...
-    'position',[0.0694 0.899 0.841 0.0729],...
-    'string','Speed of Sound Correction',...
-    'backgroundcolor','w',...
-    'fontsize',10);
-uicontrol(hf,'style','text',...
+    'position',[0.05 0.895 0.18 0.06],...
+    'string','Echosounder Sound Vel. (m/s)',...
+    'backgroundcolor',[0.94 0.94 0.94]);
+gd.edit0 = uicontrol(hf,'style','edit',...
     'units','normalized',...
-    'position',[0.0267 0.15 0.437 0.101],...
-    'string','Computed Speed of Sound (m/s)','backgroundcolor','w');
-uicontrol(hf,'style','text',...
-    'units','normalized',...
-    'position',[0.0531 0.368 0.31 0.0567],...
-    'string','Salinity','backgroundcolor','w');
-uicontrol(hf,'style','text',...
-    'units','normalized',...
-    'position',[0.0367 0.49 0.302 0.121],...
-    'string','Temp. (deg C)','backgroundcolor','w');
-uicontrol(hf,'style','text',...
-    'units','normalized',...
-    'position',[0.0367 0.704 0.327 0.13],...
-    'string','Original Speed of Sound (m/s)','backgroundcolor','w');
-uicontrol(hf,'style','text',...
-    'units','normalized',...
-    'position',[0.469 0.15 0.437 0.101],...
-    'string','none','backgroundcolor','w',...
-    'visible','off');
+    'position',[0.25 0.905 0.139 0.0492],...
+    'string',sprintf('%0.2f',gd.sv.sos_orig),...
+    'backgroundcolor',[1 1 1]);
 
+gd.table1 = uitable(hf,'units','normalized',...
+    'position',[0.05 0.215 0.35 0.673],...
+    'ColumnName',{'Depth (m)','SV (m/s)'},...
+    'data',data,...
+    'ColumnEditable', [true true],...
+    'CellEditCallback',@sos_edit_table,...
+    'enable',list_enable);
+gd.ax1 = axes('position',[0.55 0.215 0.4 0.665],...
+    'ydir','rev',...
+    'xaxislocation','top',...
+    'nextplot','add');
+gd.lh=plot(gd.sv.sos,gd.sv.depth,'ko-',...
+    'markerfacecolor','k');
 
+xlabel('\bf\itSound Velocity (m/s)')
+ylabel('\bf\itDepth (m)')
+
+uicontrol(hf,'style','text',...
+    'units','normalized',...
+    'position',[0.05 0.13 0.18 0.0425],...
+    'string','Mean Velocity (m/s)',...
+    'backgroundcolor',[0.94 0.94 0.94]);
 gd.edit1 = uicontrol(hf,'style','edit',...
     'units','normalized',...
-    'position',[0.457 0.328 0.445 0.117],...
-    'string',sal,'backgroundcolor',[1 1 1],...
-    'callback',@sos_compute);
-gd.edit2 = uicontrol(hf,'style','edit',...
+    'position',[0.25 0.125 0.139 0.0492],...
+    'string',sprintf('%0.2f',gd.sv.mean_vel),...
+    'backgroundcolor',[1 1 1],...
+    'callback',@check_is_ready);
+
+bg = uibuttongroup('units','normalized',...
+    'position',[0.05 0.0125 0.35 0.1]);
+gd.sv_prof = uicontrol(bg,'Style',...
+    'radiobutton',...
     'units','normalized',...
-    'position',[0.457 0.53 0.445 0.13],...
-    'string',temp,'backgroundcolor',[1 1 1],...
-    'callback',@sos_compute);
-gd.edit3 = uicontrol(hf,'style','edit',...
+    'String','Use Profile',...
+    'Position',[0.1 0.5 0.7 0.35],...
+    'HandleVisibility','off');
+
+gd.sv_mean = uicontrol(bg,'Style','radiobutton',...
+    'String','Use Mean SV',...
     'units','normalized',...
-    'position',[0.461 0.733 0.445 0.121],...
-    'string',sos_old,'backgroundcolor',[1 1 1],...
-    'callback',@sos_compute);
-gd.edit4 = uicontrol(hf,'style','edit',...
-    'units','normalized',...
-    'position',[0.457 0.132 0.445 0.117],...
-    'string','','backgroundcolor',[1 1 1],...
-    'callback',@sos_compute);
+    'Position',[0.1 0.1 0.7 0.35],...
+    'HandleVisibility','off',...
+    'value',gd.sv.use_mean_sos,...
+    'callback',@check_is_ready);
 
 
-gd.push1 = uicontrol(hf,'style','pushbutton',...
+uicontrol(hf,'style','pushbutton',...
     'units','normalized',...
-    'position',[0.531 0.0164 0.298 0.0931],...
-    'string','Cancel','backgroundcolor',[0.8 0.8 0.8],...
-    'callback',@local_close);
+    'position',[0.553 0.0134 0.157 0.0895],...
+    'string','cancel',...
+    'backgroundcolor',[0.94 0.94 0.94],...
+    'callback',@(h,e)(close(hf)));
+gd.push2 = uicontrol(hf,'style','pushbutton',...
+    'units','normalized',...
+    'position',[0.733 0.0134 0.157 0.0895],...
+    'string','Apply',...
+    'backgroundcolor',[0.94 0.94 0.94],...
+    'enable',list_enable,...
+    'callback',@(h,e)(uiresume(hf)));
 
-guidata(hf,gd)
+menu1=uimenu('label','File');
+uimenu(menu1,'label','Open',...
+    'callback',@sos_gui_open)
+
+menu2=uimenu('label','Utilities');
+uimenu(menu2,'label','Avg. Profiles',...
+    'callback',@sos_avg_prof);
+
+gd.isready=[0 0];
+
+guidata(hf,gd);
 
 uiwait
-gd=guidata(hf);
-sos_corr=gd.sos_corr;
-close(hf)
 
-end
-
-%%%%----------------------------------------------------------------------
-function sos_compute(hf,evnt,hand) %#ok
-gd=guidata(hf);
-
-gd.sos=str2double(get(gd.edit4,'string'));
-gd.temp=str2double(get(gd.edit2,'string'));
-gd.sal=str2double(get(gd.edit1,'string'));
-gd.sos_old=str2double(get(gd.edit3,'string'));
-
-
-if all(isfinite([gd.temp gd.sal]))
-    gd.sos=sw_svel(gd.sal,gd.temp,0);
-    set(gd.edit4,'string',sprintf('%0.1f',gd.sos))
-    set(gd.push1,'string','Go',...
-        'backgroundcolor','g')
-elseif isfinite(gd.sos)
-    set(gd.push1,'string','Go',...
-        'backgroundcolor','g')
-else
-    set(gd.push1,'string','Cancel',...
-        'backgroundcolor',[0.8 0.8 0.8])
-end
-
-guidata(hf,gd)
-
-end
-%%%%-----------------------------------------------------------------------
-function local_close(hf,evnt,hand) %#ok
-gd=guidata(hf);
-
-if strcmpi(get(gd.push1,'string'),'cancel')
-    gd.sos_corr=[];
-    guidata(hf,gd);
-    uiresume
+if ishandle(hf) %if user pressed cancel
+    gd=guidata(hf);
     
+    sv=gd.sv;
+    sv.mean_vel=str2double(get(gd.edit1,'string'));
+    sv.sos_orig=str2double(get(gd.edit0,'string'));
+    sv.use_mean_sos=get(gd.sv_mean,'value');
+    sv.use_prof=get(gd.sv_prof,'value');
+    close(hf)
 else
-    gd.sos_corr.sos_old=gd.sos_old;
-    gd.sos_corr.sos_new=gd.sos;
-    gd.sos_corr.ratio=gd.sos/gd.sos_old;
-    gd.info.speed_of_sound=gd.sos;
-    guidata(hf,gd);
-    uiresume
+    sv=[];
+    return
+    
 end
 
 end
+
+function check_is_ready(hf,evnt) %#ok
+
+gd=guidata(hf);
+val=get(gd.sv_mean,'value');
+if val==0
+    gd.isready(1)=1;
+end
+
+sosnew=str2double(get(gd.edit1,'string'));
+if isfinite(sosnew)
+    gd.isready(2)=1;
+end
+
+if all(gd.isready==1)
+    set(gd.push2,'enable','on')
+end
+
+end
+
+
+function sos_gui_open(hf,evnt) %#ok
+
+gd=guidata(hf);
+
+[filename, pathname, fidx] = uigetfile( ...
+    {'*.mat', 'YSI CastAway Files (*.mat)';...
+    '*.vel', 'Hypack SV files (*.vel)'},...
+    'Select a file');
+
+if filename==0
+    return
+end
+
+switch fidx
+    case 1
+        sosp=load([pathname,filename]);
+        sv.depth=sosp.Depth;
+        sv.sos=sosp.Sound_velocity;
+        sv.time=diff([0;sv.depth])./sv.sos;
+        
+    case 2
+        
+        fmt='%f %f';
+        fid=fopen([pathname,filename],'r');
+        svdata=textscan(fid,fmt,'headerlines',1);
+        sv.depth=svdata{1};
+        sv.sos=svdata{2};
+        sv.time=diff([0;sv.depth])./sv.sos;
+        fclose(fid);
+end
+
+set(gd.table1,'enable','on');
+set(gd.push2,'enable','on');
+
+gd.sv=sv;
+guidata(hf,gd);
+update_sos_gui(hf);
+
+end
+function update_sos_gui(hf,evnt) %#ok
+
+gd=guidata(hf);
+
+data=cell(length(gd.sv.depth),2);
+data(:,1)=cellfun(@(x)(sprintf('%0.2f',x)),...
+    num2cell(gd.sv.depth),'un',0);
+data(:,2)=cellfun(@(x)(sprintf('%0.2f',x)),...
+    num2cell(gd.sv.sos),'un',0);
+
+set(gd.table1,'data',data)
+
+set(gd.edit1,'string',sprintf('%0.2f',nanmean(gd.sv.sos)));
+
+if ~isempty(gd.lh)
+    set(gd.lh,'xdata',gd.sv.sos,'ydata',gd.sv.depth);
+else
+    gd.lh=plot(gd.sv.sos,gd.sv.depth,'ko-',...
+        'markerfacecolor','k',...
+        'parent',gd.ax1);
+end
+guidata(hf,gd);
+end
+
+function sos_avg_open(hf,evnt) %#ok
+
+gd=guidata(hf);
+
+[filename, pathname, fidx] = uigetfile( ...
+    {'*.mat', 'YSI CastAway Files (*.mat)';...
+    '*.vel', 'Hypack SV files (*.vel)'},...
+    'Select a file','multiselect','on');
+
+if pathname==0
+    return
+end
+
+if ~iscell(filename)
+    filename={filename};
+end
+
+switch fidx
+    case 1
+        sos=cellfun(@(x)(load([pathname,x])),filename);
+        gd.sos_avg_depth=arrayfun(@(x)(x.Depth),sos,'un',0);
+        gd.sos_avg_p=arrayfun(@(x)(x.Sound_velocity),sos,'un',0);
+        
+        
+    case 2
+        
+        fmt='%f %f';
+        gd.sos_avg_depth=cell(1,length(filename));
+        gd.sos_avg_p=cell(1,length(filename));
+        for i =1:length(filename)
+            fid=fopen([pathname,filename{i}],'r');
+            svdata=textscan(fid,fmt,'headerlines',1);
+            fclose(fid);
+            gd.sos_avg_depth{i}=svdata{1};
+            gd.sos_avg_p{i}=svdata{2};
+        end
+        
+end
+
+gd.sos_avg_ready=1;
+gd.sos_path=pathname;
+set(gd.list,'string',filename)
+
+if all(gd.sos_avg_ready==1);
+    set(gd.done,'enable','on')
+end
+
+guidata(hf,gd);
+end
+
+
+function [] = sos_avg_prof(hf,evnt) %#ok
+% The basic layout of this GUI was made with the help of guidegetter,
+% available on the File Exchange at Mathworks.com
+
+gd=guidata(hf);
+
+hf2 = figure('units','normalized',...
+    'position',[0.354 0.651 0.177 0.254],...
+    'menubar','none',...
+    'name','sos_avg_prof',...
+    'numbertitle','off',...
+    'color',[0.94 0.94 0.94]);
+
+uicontrol(hf2,'style',...
+    'pushbutton','units',...
+    'normalized','position',...
+    [0.0914 0.752 0.204 0.128],...
+    'string','Open Files',...
+    'backgroundcolor',[0.94 0.94 0.94],...
+    'callback',@sos_avg_open);
+gd2.list = uicontrol(hf2,'style','listbox',...
+    'units','normalized',...
+    'position',[0.327 0.628 0.558 0.248],...
+    'string','No files selected',...
+    'backgroundcolor',[1 1 1]);
+
+
+uipanel1 = uipanel('parent',hf2,...
+    'units','normalized',...
+    'position',[0.0885 0.0803 0.537 0.314],...
+    'title','');
+gd2.binsize = uicontrol(uipanel1,'style','edit',...
+    'units','normalized',...
+    'position',[0.0562 0.22 0.433 0.432],...
+    'string','0.5',...
+    'backgroundcolor',[1 1 1]);
+gd2.btxt = uicontrol(uipanel1,'style','text',...
+    'units','normalized',...
+    'position',[0.551 0.259 0.399 0.351],...
+    'string','Bin size (m)',...
+    'backgroundcolor',[0.94 0.94 0.94]);
+
+gd2.done=uicontrol(hf2,'style','pushbutton',...
+    'units','normalized',...
+    'position',[0.678 0.0839 0.204 0.109],...
+    'string','Done',...
+    'enable','off',...
+    'backgroundcolor',[0.94 0.94 0.94],...
+    'callback',@sos_do_avg);
+
+uicontrol(hf2,'style','pushbutton',...
+    'units','normalized',...
+    'position',[0.678 0.23 0.204 0.109],...
+    'string','Cancel',...
+    'backgroundcolor',[0.94 0.94 0.94],...
+    'callback',@(h,e)(close(hf2)));
+
+gd2.sos_path=[pwd,filesep];
+gd2.sos_avg_ready=0;
+guidata(hf2,gd2)
+
+uiwait
+if ishandle(hf2) %if user pressed cancel
+    gd2=guidata(hf2);
+    close(hf2)
+    
+    set(gd.table1,'enable','on');
+    set(gd.push2,'enable','on');
+    
+    sv.depth=gd2.dout(:,1);
+    sv.sos=gd2.dout(:,2);
+    sv.time=diff([0;sv.depth])./sv.sos;
+    gd.sv=sv;
+    
+    guidata(hf,gd);
+end
+update_sos_gui(hf);
+end
+
+function sos_do_avg(hf,evnt) %#ok
+
+gd=guidata(hf);
+
+binsize=str2double(get(gd.binsize,'string'));
+
+dall=cat(1,gd.sos_avg_depth{:});
+zbins=[min(dall):binsize:max(dall),max(dall)];
+
+[n,bin]=histc(dall,zbins);
+bin(bin==numel(n))=numel(n)-1;
+zcen=zbins(2:end)-(binsize/2);
+
+sos_avg=accumarray(bin,cat(1,gd.sos_avg_p{:}),...
+    [numel(n)-1 1],@mean,NaN);
+
+%make sure no nans
+dout=[zcen' sos_avg];
+dout(any(isnan(dout),2),:)=[];
+
+gd.dout=dout;
+guidata(hf,gd);
+
+uiresume
+end
+
+function sos_edit_table(hf,evnt)
+
+gd=guidata(hf);
+r = evnt.Indices(1);
+c = evnt.Indices(2);
+data=get(gd.table1,'Data');
+edata=str2double(evnt.EditData);
+if isnan(edata)
+    data(r,:)=[];
+else
+    
+    data{r,c}=sprintf('%0.2f',edata);
+end
+
+mdata=str2double(data);
+gd.sv.depth=mdata(:,1);
+gd.sv.sos=mdata(:,2);
+
+guidata(hf,gd);
+update_sos_gui(hf);
+
+end
+
 
 %%%%%----------------------------------------------------------------------
 function [dstr,hdr] = read_meta(filen)
@@ -6251,14 +6676,23 @@ if gdata.rawflag==1;
     
     
     
-    if isfield(gdata,'sos_corr')
+    if isfield(gdata,'sv')
         zr=slidefun(fun,gdata.lfd.lflen,...
             gdata.bdata.zraw(pl));
-        zsos=zr.*gdata.sos_corr.ratio;
-         gdata.bdata.zraw(pl)=zr;
-        gdata.bdata.zc(pl)=((zsos-...
-            gdata.bdata.tide(pl)).*gdata.invert)-gdata.manoff;
-
+        if gdata.invert==1
+            zraw=-zr(pl);
+        end
+        zsos=apply_sos_prof(zraw,gdata.sv.sos_orig,...
+            [gdata.sv.depth gdata.sv.sos],gdata.sv.use_mean_sos,...
+            gdata.sv.mean_vel)-gdata.manoff;
+        if gdata.invert==1
+            zsos=-zsos;
+        end
+        
+        gdata.bdata.zc=zsos-gdata.bdata.tide(pl);
+        gdata.bdata.zraw(pl)=zr;
+        
+        
     else
         gdata.bdata.zraw(pl)=slidefun(fun,gdata.lfd.lflen,...
             gdata.bdata.zraw(pl));
@@ -6266,7 +6700,7 @@ if gdata.rawflag==1;
             gdata.bdata.tide(pl)).*gdata.invert)-gdata.manoff;
     end
     
-
+    
     set(gdata.l1,'ydata',gdata.bdata.zraw);
     
     gdata.edits{gdata.numedits}=pl;
@@ -6769,11 +7203,11 @@ while eoh~=1
             s2=s1(2:end);
             for i=1:length(s2);
                 if ~isempty(regexp(s2{i},'.geo','once'))
-                  [junk,file,ext]=fileparts(s2{i}); %#ok
-                  
+                    [junk,file,ext]=fileparts(s2{i}); %#ok
+                    
                     hdr.geoid=[file,ext];
                 end
-            end 
+            end
             hdr.orthometric_height_corr=s2{end};
             
             
@@ -6923,7 +7357,7 @@ for i=1:length(codes);
                 tdata.ttime=...
                     datenum(yr,mon,day)+...
                     tdata.hyttime./86400;
-            
+                
             case 'KTC'
                 kdata.ktime=data3(:,1);
                 kdata.ellipsoid_height_wgs84=...
@@ -7049,11 +7483,11 @@ end;
 bdata.zraw=(sdata.zraw).*invert; %invert z if specified
 
 if exist('tdata','var')
-  
-
+    
+    
     if exist('kdata','var')
         fields=fieldnames(kdata);
-        [junk,ia,ib]=intersect(rdata.hygtime,kdata.ktime); %#ok 
+        [junk,ia,ib]=intersect(rdata.hygtime,kdata.ktime); %#ok
         for i=1:length(fields)
             
             rdata.(fields{i})=nan(numel(rdata.ptime),1);
@@ -7061,11 +7495,11 @@ if exist('tdata','var')
         end
     end
     
-     [junk,ia,ib]=intersect(rdata.hygtime,tdata.hyttime); %#ok
+    [junk,ia,ib]=intersect(rdata.hygtime,tdata.hyttime); %#ok
     rdata.tide=nan(numel(rdata.ptime),1);
     rdata.tide(ia)=tdata.tide(ib);
     
-     %only use values with valid tide data
+    %only use values with valid tide data
     warning('off','MATLAB:interp1:NaNinY')
     try
         bdata.tide=interp1(rdata.ptime,rdata.tide,sdata.ztime);
@@ -9573,18 +10007,26 @@ end
 
 gdata.bdata.zraw(nanind)=bdepth;
 
-if isfield(gdata,'sos_corr')
-    zsos=gdata.bdata.zraw(nanind).*gdata.sos_corr.ratio;
-    gdata.bdata.zc(nanind)=((zsos-...
-        gdata.bdata.tide(nanind)).*gdata.invert)-gdata.manoff;
+if isfield(gdata,'sv')
+    if gdata.invert==1
+        zraw=-gdata.bdata.zraw;
+    end
+    zsos=apply_sos_prof(zraw(nanind),gdata.sv.sos_orig,...
+        [gdata.sv.depth gdata.sv.sos],gdata.sv.use_mean_sos,...
+        gdata.sv.mean_vel)-gdata.manoff;
+    if gdata.invert==1
+        zsos=-zsos;
+    end
+    
+    gdata.bdata.zc(nanind)=zsos-gdata.bdata.tide(nanind);
+    
 else
     gdata.bdata.zc(nanind)=((bdepth-...
         gdata.bdata.tide(nanind)).*gdata.invert)-gdata.manoff;
 end
 
 
-gdata.bdata.zc(nanind)=((bdepth-...
-    gdata.bdata.tide(nanind)).*gdata.invert)-gdata.manoff;
+
 set(gdata.l1,'ydata',gdata.bdata.zraw);
 
 gdata.xlimo=[min(gdata.bdata.distance),...
@@ -9658,10 +10100,21 @@ if numel(xp)>1
     gdata.numedits=gdata.numedits+1;
     gdata.edits{gdata.numedits}=dind';
     
-    if isfield(gdata,'sos_corr')
-        zsos=gdata.bdata.zraw(dind).*gdata.sos_corr.ratio;
-        gdata.bdata.zc(dind)=((zsos-...
-            gdata.bdata.tide(dind)).*gdata.invert)-gdata.manoff;
+    if isfield(gdata,'sv')
+        
+        if gdata.invert==1
+            zraw=-gdata.bdata.zraw(dind);
+        end
+        zsos=apply_sos_prof(zraw,gdata.sv.sos_orig,...
+            [gdata.sv.depth gdata.sv.sos],gdata.sv.use_mean_sos,...
+            gdata.sv.mean_vel)-gdata.manoff;
+        if gdata.invert==1
+            zsos=-zsos;
+        end
+        
+        gdata.bdata.zc(dind)=zsos-gdata.bdata.tide(dind);
+        
+        
     else
         gdata.bdata.zc(dind)=((gdata.bdata.zraw(dind)-...
             gdata.bdata.tide(dind)).*gdata.invert)-gdata.manoff;
@@ -11474,16 +11927,16 @@ function applytidecorr(hfig,evnt) %#ok
 gdata=guidata(hfig);
 
 if strcmpi(gdata.tideopt.method,'none')
-%     gdata.bdata.tide(gdata.tideopt.badtide)=NaN;
-%     gdata.bdata.zc=((gdata.bdata.zraw-...
-%         gdata.bdata.tide).*...
-%         gdata.invert)-gdata.manoff;
-%     if isfield(gdata,'l1')
-%         if ishandle(gdata.l1)
-%             set(gdata.l1,'ydata',gdata.bdata.zc);
-%         end
-%     end
-%     guidata(hfig,gdata);
+    %     gdata.bdata.tide(gdata.tideopt.badtide)=NaN;
+    %     gdata.bdata.zc=((gdata.bdata.zraw-...
+    %         gdata.bdata.tide).*...
+    %         gdata.invert)-gdata.manoff;
+    %     if isfield(gdata,'l1')
+    %         if ishandle(gdata.l1)
+    %             set(gdata.l1,'ydata',gdata.bdata.zc);
+    %         end
+    %     end
+    %     guidata(hfig,gdata);
     return
     
 end
@@ -11747,7 +12200,7 @@ function res = uical(sDate,lang)
 %   your own by editing the SET_LANGUAGES nested function at the bottom of this
 %   file.
 %
-%   
+%
 %   Customization Tips:
 %   You can customize the colors of the calendar by editing the "Colors" section
 %   at the begining of the main function. See comments there for more details.
@@ -11785,34 +12238,34 @@ langDef  = 'en';
 
 % Use default values if input does not exist
 switch nargin
-  case 0
-    sDate = sDateDef;
-    lang  = langDef;
-  case 1
-    lang = langDef;
+    case 0
+        sDate = sDateDef;
+        lang  = langDef;
+    case 1
+        lang = langDef;
 end
 
 % Check input argument validity
 if ~isnumeric(sDate)
-  error('MYCAL:DateFormat:WrongClass','First input must be numeric');
+    error('MYCAL:DateFormat:WrongClass','First input must be numeric');
 end
 switch numel(sDate)
-  case 1
-    sDate = datevec(sDate);
-  case 3
-    if sDate(1) < 0
-      error('MYCAL:DateFormat:WrongYearVal','First element of the first input must be a valid year number');
-    end
-    if (sDate(2) > 12) && (sDate(2) < 1)
-      error('MYCAL:DateFormat:WrongMonthVal','Second element of the first input must be a valid month number');
-    end
-    if (sDate(3) > 31) && (sDate(3) < 1)
-      error('MYCAL:DateFormat:WrongDayVal','Third element of the first input must be a valid day number');
-    end
-  otherwise
-    error('MYCAL:DateFormat:WrongVal','First input must be a numeric scalar or a 3-elements vector');
+    case 1
+        sDate = datevec(sDate);
+    case 3
+        if sDate(1) < 0
+            error('MYCAL:DateFormat:WrongYearVal','First element of the first input must be a valid year number');
+        end
+        if (sDate(2) > 12) && (sDate(2) < 1)
+            error('MYCAL:DateFormat:WrongMonthVal','Second element of the first input must be a valid month number');
+        end
+        if (sDate(3) > 31) && (sDate(3) < 1)
+            error('MYCAL:DateFormat:WrongDayVal','Third element of the first input must be a valid day number');
+        end
+    otherwise
+        error('MYCAL:DateFormat:WrongVal','First input must be a numeric scalar or a 3-elements vector');
 end
-  
+
 
 % Language dependent strings
 set_language(lang);
@@ -11840,95 +12293,95 @@ daysNy = figH - ctrlH - dayH + 1;
 
 % Create figure
 handles.FgCal = figure( ...
-  'Visible', 'off', ...
-  'Tag', 'FgCal', ...
-  'Name', '', ...
-  'Units', 'pixels', ...
-  'Position', [50 50 figW figH], ...
-  'Toolbar', 'none', ...
-  'MenuBar', 'none', ...
-  'NumberTitle', 'off', ...
-  'Color', figColor, ...
-  'CloseRequestFcn',@FgCal_CloseRequestFcn,...
-  'WindowStyle','modal');
+    'Visible', 'off', ...
+    'Tag', 'FgCal', ...
+    'Name', '', ...
+    'Units', 'pixels', ...
+    'Position', [50 50 figW figH], ...
+    'Toolbar', 'none', ...
+    'MenuBar', 'none', ...
+    'NumberTitle', 'off', ...
+    'Color', figColor, ...
+    'CloseRequestFcn',@FgCal_CloseRequestFcn,...
+    'WindowStyle','modal');
 
 % Move the GUI to the center of the screen
 movegui(handles.FgCal,'center')
 
 % Columns Headers containing initials of the week days
 for dayNidx=1:7
-  
-  daysNx = (dayNidx - 1) * (dayW - 1);
-  
-  handles.EdDayN(dayNidx) = uicontrol( ...
-    'Parent', handles.FgCal, ...
-    'Tag', 'EdDay', ...
-    'Style', 'edit', ...
-    'Units', 'pixels', ...
-    'Position', [daysNx daysNy dayW dayH], ...
-    'ForegroundColor', colorDayNF, ...
-    'BackgroundColor', colorDayNB, ...
-    'String', daysN{dayNidx}, ...
-    'HorizontalAlignment', 'center', ...
-    'Enable','inactive');
-  
+    
+    daysNx = (dayNidx - 1) * (dayW - 1);
+    
+    handles.EdDayN(dayNidx) = uicontrol( ...
+        'Parent', handles.FgCal, ...
+        'Tag', 'EdDay', ...
+        'Style', 'edit', ...
+        'Units', 'pixels', ...
+        'Position', [daysNx daysNy dayW dayH], ...
+        'ForegroundColor', colorDayNF, ...
+        'BackgroundColor', colorDayNB, ...
+        'String', daysN{dayNidx}, ...
+        'HorizontalAlignment', 'center', ...
+        'Enable','inactive');
+    
 end
 
 % Days UI controls
 for dayIdx=1:42
-  
-  % X and Y Positions
-  [i,j] = ind2sub([6,7],dayIdx);
-  
-  dayX = (j - 1) * (dayW - 1);
-  dayY = (dayH - 1) * 6 - i * (dayH - 1);
-  
-  handles.EdDay(dayIdx) = uicontrol( ...
-    'Parent', handles.FgCal, ...
-    'Tag', 'EdDay', ...
-    'Style', 'edit', ...
-    'Units', 'pixels', ...
-    'Position', [dayX dayY dayW dayH], ...
-    'BackgroundColor', colorDayB, ...
-    'ForegroundColor', colorDayF, ...
-    'String', '', ...
-    'HorizontalAlignment', 'center', ...
-    'Enable','inactive');
-  
+    
+    % X and Y Positions
+    [i,j] = ind2sub([6,7],dayIdx);
+    
+    dayX = (j - 1) * (dayW - 1);
+    dayY = (dayH - 1) * 6 - i * (dayH - 1);
+    
+    handles.EdDay(dayIdx) = uicontrol( ...
+        'Parent', handles.FgCal, ...
+        'Tag', 'EdDay', ...
+        'Style', 'edit', ...
+        'Units', 'pixels', ...
+        'Position', [dayX dayY dayW dayH], ...
+        'BackgroundColor', colorDayB, ...
+        'ForegroundColor', colorDayF, ...
+        'String', '', ...
+        'HorizontalAlignment', 'center', ...
+        'Enable','inactive');
+    
 end
 
 % Listbox containing the list of months
 handles.PuMonth = uicontrol( ...
-  'Parent', handles.FgCal, ...
-  'Tag', 'PuMonth', ...
-  'Style', 'popupmenu', ...
-  'Units', 'pixels', ...
-  'Position', [ctrlYW-2 figH-ctrlH+1 ctrlMW+2 ctrlH], ...
-  'BackgroundColor', [1 1 1], ...
-  'String', monthsN, ...
-  'Value', res(2), ...
-  'Callback',@set_cal);
+    'Parent', handles.FgCal, ...
+    'Tag', 'PuMonth', ...
+    'Style', 'popupmenu', ...
+    'Units', 'pixels', ...
+    'Position', [ctrlYW-2 figH-ctrlH+1 ctrlMW+2 ctrlH], ...
+    'BackgroundColor', [1 1 1], ...
+    'String', monthsN, ...
+    'Value', res(2), ...
+    'Callback',@set_cal);
 
 % Edit control which enables you to enter a year number
 handles.EdYear = uicontrol( ...
-  'Parent', handles.FgCal, ...
-  'Tag', 'EdYear', ...
-  'Style', 'edit', ...
-  'Units', 'pixels', ...
-  'Position', [0 figH-ctrlH ctrlYW-1 ctrlH+1], ...
-  'BackgroundColor', [1 1 1], ...
-  'String', res(1), ...
-  'Callback',@set_cal);
+    'Parent', handles.FgCal, ...
+    'Tag', 'EdYear', ...
+    'Style', 'edit', ...
+    'Units', 'pixels', ...
+    'Position', [0 figH-ctrlH ctrlYW-1 ctrlH+1], ...
+    'BackgroundColor', [1 1 1], ...
+    'String', res(1), ...
+    'Callback',@set_cal);
 
 % Selection button
 handles.PbChoose = uicontrol( ...
-  'Parent', handles.FgCal, ...
-  'Tag', 'PbChoose', ...
-  'Style', 'pushbutton', ...
-  'Units', 'pixels', ...
-  'Position', [ctrlYW+ctrlMW figH-ctrlH+1 ctrlCW ctrlH], ...
-  'String', 'OK', ...
-  'Callback','uiresume');
+    'Parent', handles.FgCal, ...
+    'Tag', 'PbChoose', ...
+    'Style', 'pushbutton', ...
+    'Units', 'pixels', ...
+    'Position', [ctrlYW+ctrlMW figH-ctrlH+1 ctrlCW ctrlH], ...
+    'String', 'OK', ...
+    'Callback','uiresume');
 
 % Display calendar for the default date
 set_cal();
@@ -11952,118 +12405,118 @@ delete(handles.FgCal);
 
 
 %-------------------------------------------------------------------------------
-  function FgCal_CloseRequestFcn(varargin)
-    % Callback executed when the user click on the close button of the figure.
-    % This means he wants to cancel date selection so function returns the
-    % intial date (the one used when we opened the calendar)
-    
-    % Set the output to the intial date value
-    res = sDate(1:3);
-    
-    % End execution of the window
-    uiresume;
-    
-  end
-
-
-%-------------------------------------------------------------------------------
-  function EdDay_ButtonDownFcn(varargin)
-    % Callback executed when the user click on day.
-    % Updates the RES variable containing the currently selected date and then
-    % update the calendar.
-    
-    res(1) = str2double(get(handles.EdYear,'String'));
-    res(2) = get(handles.PuMonth,'Value');
-    res(3) = str2double(get(varargin{1},'String')); % Number of the selected day
-    
-    set_cal();
-    
-  end
-
-
-%-------------------------------------------------------------------------------
-  function set_cal(varargin)
-    % Displays the calendar according to the selected date stored in RES
-
-    % Get selected Year and Month
-    year   = str2double(get(handles.EdYear,'String'));
-    res(2) = get(handles.PuMonth,'value');
-    
-    % Check Year value (keep previous value if the new one is wrong)
-    if ~isnan(year)
-      res(1) = abs(round(year)); % ensure year is a positive integer
-    end
-    set(handles.EdYear,'String',res(1))
-
-    % Get the matrix of the calendar for selected month and year then convert it
-    % into a cell array
-    c = calendar(res(1),res(2));
-    v = mat2cell(c,ones(1,6),ones(1,7));
-
-    % Cell array of indices used to index the vector of handles
-    i = mat2cell((1:42)',ones(1,42),1);
-
-    % Set String property for all cells of the calendar
-    cellfun(@(i,x) set(handles.EdDay(i),'string',x),i,v(:))
-
-    % Change properties of the "non-day" cells of the calendar
-    set(handles.EdDay(c==0), ...
-      'ButtonDownFcn'  , '', ...
-      'BackgroundColor', colorNoDay, ...
-      'string'         , '')
-    
-    % Change the properties of the calendar's cells containing existing days
-    set(handles.EdDay(c~=0), ...
-      'ButtonDownFcn'  , @EdDay_ButtonDownFcn, ...
-      'BackgroundColor', colorDayB, ...
-      'ForegroundColor', colorDayF, ...
-      'FontWeight'     ,'normal')
-
-    % Highlight the selected day
-    set(handles.EdDay(c==res(3)), ...
-      'BackgroundColor', colorSelDayB, ...
-      'ForegroundColor', colorSelDayF, ...
-      'FontWeight'     ,'bold')
-    
-    % Update the name of the figure to reflect the selected day
-    set(handles.FgCal,'Name',sprintf('%u/%u/%u',fliplr(res)))
-
-    % Give focus to the "OK" button
-    uicontrol(handles.PbChoose);
-    
-  end
-
-
-%-------------------------------------------------------------------------------
-  function set_language(lang)
-    % Sets language dependent strings used in the calendar
-    % You can add languages by adding cases below.
-    
-    switch lang
-      
-      case 'en'
+    function FgCal_CloseRequestFcn(varargin)
+        % Callback executed when the user click on the close button of the figure.
+        % This means he wants to cancel date selection so function returns the
+        % intial date (the one used when we opened the calendar)
         
-        daysN   = {'S','M','T','W','T','F','S'}; % First day is always Sunday
-        monthsN = {'January','February','March','April','May','June',...
-          'July','August','September','October','November','December'};
+        % Set the output to the intial date value
+        res = sDate(1:3);
         
-      case 'fr'
-        
-        daysN   = {'D','L','M','M','J','V','S'};
-        monthsN = {'Janvier','Février','Mars','Avril','Mai','Juin',...
-          'Juillet','Août','Septembre','Octobre','Novembre','Décembre'};
-      
-      otherwise
-        
-        % If language is not recognized then use the English strings
-        
-        daysN   = {'S','M','T','W','T','F','S'};
-        monthsN = {'January','February','March','April','May','June',...
-          'July','August','September','October','November','December'};
+        % End execution of the window
+        uiresume;
         
     end
-    
-  end
+
+
+%-------------------------------------------------------------------------------
+    function EdDay_ButtonDownFcn(varargin)
+        % Callback executed when the user click on day.
+        % Updates the RES variable containing the currently selected date and then
+        % update the calendar.
+        
+        res(1) = str2double(get(handles.EdYear,'String'));
+        res(2) = get(handles.PuMonth,'Value');
+        res(3) = str2double(get(varargin{1},'String')); % Number of the selected day
+        
+        set_cal();
+        
+    end
+
+
+%-------------------------------------------------------------------------------
+    function set_cal(varargin)
+        % Displays the calendar according to the selected date stored in RES
+        
+        % Get selected Year and Month
+        year   = str2double(get(handles.EdYear,'String'));
+        res(2) = get(handles.PuMonth,'value');
+        
+        % Check Year value (keep previous value if the new one is wrong)
+        if ~isnan(year)
+            res(1) = abs(round(year)); % ensure year is a positive integer
+        end
+        set(handles.EdYear,'String',res(1))
+        
+        % Get the matrix of the calendar for selected month and year then convert it
+        % into a cell array
+        c = calendar(res(1),res(2));
+        v = mat2cell(c,ones(1,6),ones(1,7));
+        
+        % Cell array of indices used to index the vector of handles
+        i = mat2cell((1:42)',ones(1,42),1);
+        
+        % Set String property for all cells of the calendar
+        cellfun(@(i,x) set(handles.EdDay(i),'string',x),i,v(:))
+        
+        % Change properties of the "non-day" cells of the calendar
+        set(handles.EdDay(c==0), ...
+            'ButtonDownFcn'  , '', ...
+            'BackgroundColor', colorNoDay, ...
+            'string'         , '')
+        
+        % Change the properties of the calendar's cells containing existing days
+        set(handles.EdDay(c~=0), ...
+            'ButtonDownFcn'  , @EdDay_ButtonDownFcn, ...
+            'BackgroundColor', colorDayB, ...
+            'ForegroundColor', colorDayF, ...
+            'FontWeight'     ,'normal')
+        
+        % Highlight the selected day
+        set(handles.EdDay(c==res(3)), ...
+            'BackgroundColor', colorSelDayB, ...
+            'ForegroundColor', colorSelDayF, ...
+            'FontWeight'     ,'bold')
+        
+        % Update the name of the figure to reflect the selected day
+        set(handles.FgCal,'Name',sprintf('%u/%u/%u',fliplr(res)))
+        
+        % Give focus to the "OK" button
+        uicontrol(handles.PbChoose);
+        
+    end
+
+
+%-------------------------------------------------------------------------------
+    function set_language(lang)
+        % Sets language dependent strings used in the calendar
+        % You can add languages by adding cases below.
+        
+        switch lang
+            
+            case 'en'
+                
+                daysN   = {'S','M','T','W','T','F','S'}; % First day is always Sunday
+                monthsN = {'January','February','March','April','May','June',...
+                    'July','August','September','October','November','December'};
+                
+            case 'fr'
+                
+                daysN   = {'D','L','M','M','J','V','S'};
+                monthsN = {'Janvier','Février','Mars','Avril','Mai','Juin',...
+                    'Juillet','Août','Septembre','Octobre','Novembre','Décembre'};
+                
+            otherwise
+                
+                % If language is not recognized then use the English strings
+                
+                daysN   = {'S','M','T','W','T','F','S'};
+                monthsN = {'January','February','March','April','May','June',...
+                    'July','August','September','October','November','December'};
+                
+        end
+        
+    end
 
 end
 
