@@ -375,7 +375,11 @@ uimenu(gdata.open,'label','netCDF','callback',@open_nc)
 uimenu(gdata.open,'label','META File','callback',@addMeta);
 gdata.logf=uimenu(gdata.menu1,'label','Log File Contents',...
     'callback',@showLog);
-uimenu(gdata.menu1,'Label','Send data to workspace','callback',@export1);
+if ~isdeployed
+    uimenu(gdata.menu1,'Label','Send data to workspace',...
+        'callback',@export1);
+end
+
 uimenu(gdata.menu1,'label','Load Metadata',...
     'callback',@run_read_info);
 uimenu(gdata.menu1,'label','Load Transducer Settings',...
@@ -389,20 +393,21 @@ gdata.ppkview=uimenu(gdata.ppkmenu,'label','View PPK GPS Data',...
 gdata.menu2=uimenu(gdata.menu1,'Label','Export File');
 uimenu(gdata.menu2,'label','To .xyz','callback',@export2)
 uimenu(gdata.menu2,'label','To .nc','callback',@export6);
-gdata.menug=uimenu(gdata.menu2,'Label','To Google Earth');
-uimenu(gdata.menug,'label','Export Using existing options',...
-    'callback',@export3);
-uimenu(gdata.menug,'label','Configure Google Earth Export',...
+uimenu(gdata.menu2,'Label','To .kml',...
+     'callback',@export3);
+uimenu(gdata.menu2,'label','To .shp','callback',@export_shp);
+
+
+
+uimenu(gdata.menu2,'Label','Batch','callback',@exportAll);
+
+gdata.configexport=uimenu(gdata.menu1,'label','Configure');
+uimenu(gdata.configexport,'label','Google Earth Export Options',...
     'callback',@gesetup);
+uimenu(gdata.configexport,'label','Batch Export Options',...
+    'callback',@tv_batch_gui);
 
-uimenu(gdata.menu2,'Label','To InfoBank','callback',@export4);
-gdata.menum=uimenu(gdata.menu2,'label','To .meta File','visible','off');
-uimenu(gdata.menum,'label','Export using existing options',...
-    'callback',@export5,'visible','off');
-uimenu(gdata.menum,'label','Add Metadata Info',...
-    'callback',@metainput,'visible','off');
 
-uimenu(gdata.menu2,'Label','All','callback',@exportAll);
 
 gdata.menu10=uimenu('label','Edit');
 gdata.menu11=uimenu(gdata.menu10,'label','Edit Manually',...
@@ -585,6 +590,11 @@ gdata.lfd.lftype=1;
 gdata.lfd.lflen=3;
 
 gdata.applyppk=0;
+
+gdata.batch.out_xyz=1;
+gdata.batch.out_nc=1;
+gdata.batch.out_kml=1;
+gdata.batch.out_shp=1;
 
 gdata.tideopt.method='none';
 gdata.tideopt.maxgap=gdata.maxGap;
@@ -4529,7 +4539,7 @@ end
 
 %%%%%%---------------------------------------------------------------------
 function export4(hfig, eventdata, handles)%#ok
-
+%more defunct output options
 gdata=guidata(hfig);
 
 namer=strtok(gdata.bdata.filename,'.');
@@ -4602,7 +4612,7 @@ end
 
 %%%%%----------------------------------------------------------------------
 function export5(hfig, eventdata, handles,varargin)%#ok
-
+%defunct output format, no longer available to write
 gdata=guidata(hfig);
 
 if isempty(varargin)
@@ -4811,6 +4821,57 @@ raw2nc(opt);
 
 
 end
+%%%%%----------------------------------------------------------------------
+function batch_opt = tv_batch_gui(hfig,evnt)%#ok
+
+gd=guidata(hfig);
+
+hf = figure('units','normalized','position',[0.253 0.387 0.134 0.238],...
+    'menubar','none','name','Configure Batch Output',...
+    'numbertitle','off','color',[0.925 0.914 0.847]);
+
+bod.check5 = uicontrol(hf,'style','checkbox','units','normalized',...
+    'position',[0.178 0.743 0.615 0.0888],'string','XYZ File (.xyz)',...
+    'backgroundcolor',[0.925 0.914 0.847],'value',gd.batch.out_xyz);
+bod.check4 = uicontrol(hf,'style','checkbox','units','normalized',...
+    'position',[0.178 0.612 0.615 0.0888],...
+    'string','NetCDF File (.nc)',...
+    'backgroundcolor',[0.925 0.914 0.847],'value',gd.batch.out_nc);
+bod.check3 = uicontrol(hf,'style','checkbox','units','normalized',...
+    'position',[0.178 0.48 0.615 0.0888],...
+    'string','Google Earth File (.kml)',...
+    'backgroundcolor',[0.925 0.914 0.847],'value',gd.batch.out_kml);
+bod.check2 = uicontrol(hf,'style','checkbox','units','normalized',...
+    'position',[0.178 0.349 0.615 0.0888],'string','Shape FIle (.shp)',...
+    'backgroundcolor',[0.925 0.914 0.847],'value',gd.batch.out_shp);
+uicontrol(hf,'style','pushbutton','units','normalized',...
+    'position',[0.615 0.0493 0.295 0.0822],'string','Done',...
+    'backgroundcolor',[0.925 0.914 0.847],'callback',@bodclose);
+
+guidata(hf,bod);
+
+uiwait
+bod=guidata(hf);
+gd.batch=bod.batch;
+guidata(hfig,gd);
+
+close(hf)
+end
+
+
+function bodclose(hf,evnt) %#ok
+
+bod=guidata(hf);
+bod.batch.out_xyz=get(bod.check5,'value');
+bod.batch.out_nc=get(bod.check4,'value');
+bod.batch.out_kml=get(bod.check3,'value');
+bod.batch.out_shp=get(bod.check2,'value');
+
+
+guidata(hf,bod);
+uiresume
+end
+
 % %%%%---------------------------------------------------------------------
 function exportAll(hfig, eventdata, handles)%#ok
 
@@ -4828,21 +4889,24 @@ end
 
 
 %export xyz
-h = waitbar(0,'Creating .XYZ File, Please wait...');
-set(h,'name','Creating .XYZ File');
-
-if isempty(gdata.cdata)==1
-    dlmwrite([pathname,filename,'.xyz'],[gdata.bdata.x,...
-        gdata.bdata.y,gdata.bdata.zc],...
-        'precision','%.3f','delimiter','\t')
-else
-    dlmwrite([pathname,filename,'.xyz'],[gdata.cdata.xc,...
-        gdata.cdata.yc,gdata.cdata.zc],...
-        'precision','%.3f','delimiter','\t')
+if gdata.batch.out_xyz
+    h = waitbar(0,'Creating .XYZ File, Please wait...');
+    set(h,'name','Creating .XYZ File');
+    
+    if isempty(gdata.cdata)==1
+        dlmwrite([pathname,filename,'.xyz'],[gdata.bdata.x,...
+            gdata.bdata.y,gdata.bdata.zc],...
+            'precision','%.3f','delimiter','\t')
+    else
+        dlmwrite([pathname,filename,'.xyz'],[gdata.cdata.xc,...
+            gdata.cdata.yc,gdata.cdata.zc],...
+            'precision','%.3f','delimiter','\t')
+    end
+    waitbar(1,h,'Done!');
+    close(h);
 end
-waitbar(1,h,'Done!');
-close(h);
 
+if gdata.batch.out_kml
 if isempty(gdata.cdata)==1
     gxyz=gdata.bdata;
     
@@ -4853,8 +4917,7 @@ if isempty(gdata.cdata)==1
         isfinite(gxyz.lon) & ...
         isfinite(gxyz.mtime));
     
-    xr=gxyz.x(ind);
-    yr=gxyz.y(ind);
+
     zr=gxyz.zc(ind);
     lat=gxyz.lat(ind);
     lon=gxyz.lon(ind);
@@ -4868,8 +4931,6 @@ else
         isfinite(gxyz.lon) & ...
         isfinite(gxyz.mtime));
     
-    xr=gxyz.xc(ind);
-    yr=gxyz.yc(ind);
     zr=gxyz.zc(ind);
     lat=gxyz.lat(ind);
     lon=gxyz.lon(ind);
@@ -4883,36 +4944,42 @@ gescatter([pathname,filename,'.kml'],lon(1:gdata.ge.thin:end),...
     'time',dn(1:gdata.ge.thin:end),...
     'clims',[gdata.ge.cmin gdata.ge.cmax],'colormap',gdata.ge.cmap,...
     'scale',gdata.ge.scale);
-
-%export infobank (.txt)
-h = waitbar(0,'Creating Infobank file, Please wait...');
-set(h,'name','Creating Infobank File');
-
-dni=dn(1):(1/86400):max(dn);
-[dnu,ui]=unique(dn);
-xc=interp1(dnu,lon(ui),dni);
-yc=interp1(dnu,lat(ui),dni);
-zc=interp1(dnu,zr(ui),dni);
-
-
-[year,month,day,hr,mini,sec]=datevecfix(dni,'precision',2);
-doy=(datenum(year,month,day)-datenum(year,1,1))+1;
-secr=floor(sec);
-tsec=floor((sec-secr).*10);
-
-
-fid=fopen([pathname,filename,'.txt'],'wt');
-for i=1:length(xc)
-    fprintf(fid,'%d%0.3d%0.2d%0.2d%0.2d%d\t',...
-        year(i),doy(i),hr(i),mini(i),secr(i),tsec(i));
-    fprintf(fid,'%.6f\t',yc(i));
-    fprintf(fid,'%.6f\t',xc(i));
-    fprintf(fid,'%.2f\n',zc(i));
-    waitbar(i/length(xc),h,sprintf('%d%% complete...',...
-        round((i/length(xc))*100)));
-    
 end
-fclose(fid);
+
+
+
+
+% %export meta
+% export5(hfig,[],[],[filename,'.meta']);
+
+%export netcdf
+if gdata.batch.out_nc
+     h = waitbar(0,'Creating .NC File, Please wait...');
+    export6(hfig,[],[gdata.outpath,filename,'.nc']);
+    waitbar(1,h,'Done!')
+    close(h);
+end
+
+if gdata.batch.out_shp
+    
+    if isempty(gdata.cdata)==1
+        shpdata.X=gdata.bdata.x;
+        shpdata.Y=gdata.bdata.y;
+        shpdata.Z=gdata.bdata.zc;
+    else
+        shpdata.X=gdata.cdata.xc;
+        shpdata.Y=gdata.cdata.yc;
+        shpdata.Z=gdata.cdata.zc;
+    end
+    
+    pidx=all(isfinite(cell2mat(struct2cell(shpdata)')),2);
+    shpdata=structfun(@(x)(x(pidx)),shpdata,'un',0);
+    
+    shpdata.mtime=gdata.bdata.mtime(pidx);
+    shpdata.Line_Number=gdata.hdr.lineNum;
+    
+    raw2shp([pathname,filename],shpdata)
+end
 
 
 gdata.outpath=pathname;
@@ -4922,17 +4989,82 @@ end
 
 guidata(hfig,gdata)
 
-% %export meta
-% export5(hfig,[],[],[filename,'.meta']);
+end
 
-%export netcdf
+function export_shp(hfig,evnt) %#ok
+gdata=guidata(hfig);
 
-waitbar(0,h,'Creating netCDF File')
-export6(hfig,[],[gdata.outpath,filename,'.nc']);
+namer=strtok(gdata.bdata.filename,'.');
+
+[filename, pathname] = uiputfile( ...
+    {'*.shp', 'SHP Files'}, ...
+    'Save as',[gdata.outpath,namer,'.xyz']);
+
+if filename==0
+    return
+end
+
+if isempty(gdata.cdata)==1
+    shpdata.X=gdata.bdata.x;
+    shpdata.Y=gdata.bdata.y;
+    shpdata.Z=gdata.bdata.zc;
+else
+    shpdata.X=gdata.cdata.xc;
+    shpdata.Y=gdata.cdata.yc;
+    shpdata.Z=gdata.cdata.zc;
+end
+
+pidx=all(isfinite(cell2mat(struct2cell(shpdata)')),2);
+shpdata=structfun(@(x)(x(pidx)),shpdata,'un',0);
+
+shpdata.mtime=gdata.bdata.mtime(pidx);
+shpdata.Line_Number=gdata.hdr.lineNum;
+
+raw2shp([pathname,filename],shpdata)
+
+
+gdata.outpath=pathname;
+if gdata.outpath(end)~=filesep;
+    gdata.outpath=[gdata.outpath,filesep];
+end
+
+guidata(hfig,gdata)
+
+end
+
+function raw2shp(shpfile,shpdata)
+
+h = waitbar(0,'Creating .SHP File, Please wait...');
+np=length(shpdata.X);
+dc=cell(np,1);
+shp=struct('Geometry','Point',...
+    'Line',dc,...
+    'Time',dc,...
+    'X',dc,...
+    'Y',dc,...
+    'Z',dc);
+
+lnum=num2cell(repmat(shpdata.Line_Number,np,1));
+[shp(:).Line]=deal(lnum{:});
+
+
+for i=1:np;
+    shp(i).Time=datestr(shpdata.mtime(i),...
+        'yyyy-mm-dd HH:MM:SS.FFF');
+    shp(i).X=shpdata.X(i);
+    shp(i).Y=shpdata.Y(i);
+    shp(i).Z=shpdata.Z(i);
+end
+
+waitbar(0,h,'Writing .SHP File, Please wait...');
+shapewrite(shp,shpfile)
 waitbar(1,h,'Done!')
 close(h);
 
+
+
 end
+
 %%%%%----------------------------------------------------------------------
 function cleanProfile(hfig,eventdata,handles)%#ok
 
@@ -5912,7 +6044,9 @@ end
 switch fidx
     case 1
         sosp=load([pathname,filename]);
-        sv.depth=sosp.Depth;
+        sv.depth=sosp.Depth+...
+            (diff([0;sosp.Depth])/2); %depth should be end of bin,...
+        %not bin center
         sv.sos=sosp.Sound_velocity;
         sv.time=diff([0;sv.depth])./sv.sos;
         
@@ -5979,7 +6113,8 @@ end
 switch fidx
     case 1
         sos=cellfun(@(x)(load([pathname,x])),filename);
-        gd.sos_avg_depth=arrayfun(@(x)(x.Depth),sos,'un',0);
+        gd.sos_avg_depth=arrayfun(@(x)(x.Depth+...
+           diff([0;x.Depth])./2),sos,'un',0);
         gd.sos_avg_p=arrayfun(@(x)(x.Sound_velocity),sos,'un',0);
         
         
