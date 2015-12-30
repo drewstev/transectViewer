@@ -41,8 +41,8 @@ function transectViewer(varargin)
 % Andrew Stevens, 5/25/2007
 % astevens@usgs.gov
 
-gdata.tv_ver=2.8;
-gdata.modified='11/24/2015';
+gdata.tv_ver=2.82;
+gdata.modified='12/30/2015';
 
 
 %defaults
@@ -6815,16 +6815,18 @@ if gdata.rawflag==1;
         zr=slidefun(fun,gdata.lfd.lflen,...
             gdata.bdata.zraw(pl));
         if gdata.invert==1
-            zraw=-zr(pl);
+            zr=-zr; %sv correction assumes depths postive
         end
-        zsos=apply_sos_prof(zraw,gdata.sv.sos_orig,...
+      
+        zsos=apply_sos_prof(zr,gdata.sv.sos_orig,...
             [gdata.sv.depth gdata.sv.sos],gdata.sv.use_mean_sos,...
             gdata.sv.mean_vel)-gdata.manoff;
         if gdata.invert==1
             zsos=-zsos;
+            zr=-zr; %switch raw depths back to negative
         end
         
-        gdata.bdata.zc=zsos-gdata.bdata.tide(pl);
+        gdata.bdata.zc(pl)=zsos-gdata.bdata.tide(pl);
         gdata.bdata.zraw(pl)=zr;
         
         
