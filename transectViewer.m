@@ -41,8 +41,8 @@ function transectViewer(varargin)
 % Andrew Stevens, 5/25/2007
 % astevens@usgs.gov
 
-gdata.tv_ver=2.82;
-gdata.modified='12/30/2015';
+gdata.tv_ver=2.83;
+gdata.modified='1/6/2016';
 
 
 %defaults
@@ -4955,7 +4955,7 @@ end
 %export netcdf
 if gdata.batch.out_nc
      h = waitbar(0,'Creating .NC File, Please wait...');
-    export6(hfig,[],[gdata.outpath,filename,'.nc']);
+    export6(hfig,[],[pathname,filename,'.nc']);
     waitbar(1,h,'Done!')
     close(h);
 end
