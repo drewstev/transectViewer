@@ -1185,11 +1185,13 @@ end
 
 %write svel data
 if ~isempty(opt.sv)
+    if ~isempty(opt.sv.depth)
     [~,nvars]=netcdf.inq(svel);
     for i=1:nvars
         varname=netcdf.inqVar(svel,i-1);
         midx=find(strcmpi(varname,svfields(:,2)));
         netcdf.putVar(svel,i-1,opt.sv.(svfields{midx,1})); %#ok
+    end
     end
 end
 
@@ -2464,10 +2466,10 @@ else
         gdata.bdata.tide;
 end
 
-gdata.xlimo=[min(gdata.bdata.distance),...
-    max(gdata.bdata.distance)];
-gdata.ylimo=[min(gdata.bdata.zc),...
-    max(gdata.bdata.zc)];
+gdata.xlimo=[nanmin(gdata.bdata.distance),...
+    nanmax(gdata.bdata.distance)];
+gdata.ylimo=[nanmin(gdata.bdata.zc),...
+    nanmax(gdata.bdata.zc)];
 
 %update the view
 hold off
@@ -5952,7 +5954,8 @@ gd.sv_prof = uicontrol(bg,'Style',...
     'units','normalized',...
     'String','Use Profile',...
     'Position',[0.1 0.5 0.7 0.35],...
-    'HandleVisibility','off');
+    'HandleVisibility','off',...
+    'callback',@check_is_ready);
 
 gd.sv_mean = uicontrol(bg,'Style','radiobutton',...
     'String','Use Mean SV',...
@@ -6012,8 +6015,14 @@ function check_is_ready(hf,evnt) %#ok
 
 gd=guidata(hf);
 val=get(gd.sv_mean,'value');
-if val==0
+if val==1
     gd.isready(1)=1;
+else 
+    if isempty(gd.sv.sos)
+        gd.isready(1)=0;
+    else 
+        gd.isready(1)=1;
+    end
 end
 
 sosnew=str2double(get(gd.edit1,'string'));
@@ -6023,6 +6032,8 @@ end
 
 if all(gd.isready==1)
     set(gd.push2,'enable','on')
+else 
+    set(gd.push2,'enable','off')
 end
 
 end
@@ -10432,7 +10443,8 @@ function local_open1(hf,evnt) %#ok
 gd=guidata(hf);
 
 [filename, pathname] = uigetfile( ...
-    {'*.xyz', 'XYZ Files (*.xyz)'},...
+    {'*.xyz', 'XYZ Files (*.xyz)';...
+    '*.*', 'All Files (*.*)'},...
     'Select .xyz file(s)',...
     'multiselect','on',...
     gd.fpath1);
@@ -10475,7 +10487,8 @@ function local_open2(hf,evnt) %#ok
 gd=guidata(hf);
 
 [filename, pathname] = uigetfile( ...
-    {'*.xyz', 'XYZ Files (*.xyz)'},...
+    {'*.xyz', 'XYZ Files (*.xyz)';...
+    '*.*', 'All Files (*.*)'},...
     'Select .xyz file(s)',...
     'multiselect','on',...
     gd.fpath2);
