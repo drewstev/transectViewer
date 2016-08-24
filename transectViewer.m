@@ -1511,6 +1511,7 @@ end
 %speed of sound corrections
 if isfield(ncdata.gatts,'orig_speed_of_sound');
     sv.sos_orig=str2double(ncdata.gatts.orig_speed_of_sound);
+    sv.depth=[];
 end
 if isfield(ncdata.gatts,'applied_speed_of_sound');
     if strcmpi(ncdata.gatts.applied_speed_of_sound,'profile')
@@ -3133,7 +3134,8 @@ switch evnt.Character
         if strcmp(evnt.Key,'control')
             disp('yes')
         end
-        
+    case 'b'
+        exportAll(hfig)
 end
 end
 %%%%%----------------------------------------------------------------------
@@ -3570,11 +3572,14 @@ figure(gdata.fh)
 hold off
 gdata.l1=plot(gdata.bdata.distance,gdata.bdata.zc);
 
-fun=@(x)([min(x)-(0.05*(max(x)-min(x))) max(x)+(0.05*(max(x)-min(x)))]);
+fun=@(x)([nanmin(x)-(0.05*(nanmax(x)-nanmin(x))),...
+    nanmax(x)+(0.05*(nanmax(x)-nanmin(x)))]);
 gdata.xlimo=fun(gdata.bdata.distance);
 gdata.ylimo=fun(gdata.bdata.zc);
 gdata.xlims=fun(gdata.bdata.distance);
 gdata.ylims=fun(gdata.bdata.zc);
+
+
 set(gca,'xlim',gdata.xlimo,...
     'ylim',gdata.ylimo)
 
@@ -5872,20 +5877,32 @@ function sv = sos_gui(varargin)
 % The basic layout of this GUI was made with the help of guidegetter,
 % available on the File Exchange at Mathworks.com
 
+
 if nargin>0
-    gd.sv=varargin{1};
-    data=cell(length(gd.sv.depth),2);
-    if ~isempty(gd.sv.depth)
+    sv=varargin{1};
+    if ~isempty(sv.depth)
+        
+        data=cell(length(sv.depth),2);
+        
         data(:,1)=cellfun(@(x)(sprintf('%0.2f',x)),...
-            num2cell(gd.sv.depth),'un',0);
+            num2cell(sv.depth),'un',0);
         data(:,2)=cellfun(@(x)(sprintf('%0.2f',x)),...
-            num2cell(gd.sv.sos),'un',0);  
+            num2cell(sv.sos),'un',0);
         list_enable='on';
+        gd.sv=sv;
     else
-        data=cell(20,2);
+        gd.sv.depth=[];
+        gd.sv.sos=[];
+        gd.sv.time=[];
+        gd.sv.sos_orig=1500;
+        gd.sv.use_mean_sos=0;
+        gd.sv.use_prof=1;
+        gd.sv.mean_vel=[];
+        
         list_enable='off';
+        data=cell(20,2);
+        
     end
-    
 else
     gd.sv.depth=[];
     gd.sv.sos=[];
@@ -5897,7 +5914,11 @@ else
     
     list_enable='off';
     data=cell(20,2);
+    
+    
+    
 end
+
 
 
 hf = figure('units','normalized',...
@@ -7960,7 +7981,7 @@ function R = slidefun (FUN, W, V, windowmode, varargin)
 
 % check input arguments,expected
 % <function name>, <window size>, <vector>, <windowmode>, <optional arguments ...>
-error(nargchk(3,Inf,nargin)) ;
+narginchk(3,Inf) ;
 
 if nargin==3 || isempty(windowmode),
     windowmode = 'central' ;
@@ -9405,7 +9426,7 @@ function [d, id] = getchunks(a, opt)
 
 %--------------------------------------------------------------------------
 % Error checking
-error(nargchk(1, 2, nargin));
+narginchk(1, 2);
 if ndims(a) > 2 || min(size(a)) > 1
     error('Input must be a 2-D vector');
 end
@@ -9891,10 +9912,9 @@ function bindata = readBin(varargin)
 % astevens@usgs.gov
 % 8/12/2009
 
-%check inputs
 
 %check inputs
-error(nargchk(0,2,nargin,'struct'));
+narginchk(0,2);
 
 if nargin>0
     for i=1:length(varargin)
@@ -9936,28 +9956,34 @@ while pos<numbytes
     unit=fread(fid,1,'char'); %#ok
     sw(numread)=fread(fid,1,'ushort'); %#ok
     eos(numread)=fread(fid,1,'ushort'); %#ok
-    num_samp=fread(fid,1,'ushort');
-    if isempty(num_samp)
+    num_samp(numread)=fread(fid,1,'ushort');
+    if isempty(num_samp(numread))
         break
     end
     fseek(fid,16,'cof');
-    samp=fread(fid,num_samp,'ushort');
+    samp=fread(fid,num_samp(numread),'ushort');
     
     if numread==1
-        bytes_per_ping=35+(num_samp*2);
+        bytes_per_ping=35+(num_samp(numread)*2);
         num_pings=numbytes/bytes_per_ping;
         
         bindata=struct('filename',fname,'vtime',zeros(1,num_pings),...
-            'range',zeros(num_samp,num_pings),...
-            'vals',zeros(num_samp,num_pings));
+            'range',zeros(num_samp(numread),num_pings),...
+            'vals',zeros(num_samp(numread),num_pings));
         
     end
     
+    if isempty(samp), 
+        eos(numread)=eos(numread-1);
+        sw(numread)=sw(numread-1);
+        num_samp(numread)=num_samp(numread-1);
+        break 
+    end
     
     bindata.range(:,numread)=linspace(eos(numread)-sw(numread),...
-        eos(numread),num_samp);
+        eos(numread),num_samp(numread));
     
-    if isempty(samp), break, end
+    
     
     bindata.vtime(numread)=timer;
     bindata.vals(:,numread)=samp;
@@ -9976,7 +10002,7 @@ fclose(fid);
 if (numel(unique(sw))>1 || numel(unique(eos))>1);
     %     set(h,'name','Processing Bin File.');
     rangei=linspace(min(eos)-max(sw),...
-        max(eos),num_samp);
+        max(eos),max(num_samp));
     
     for i = 1:numread-1;
         bindata.vals(:,i)=interp1(bindata.range(:,i),...
