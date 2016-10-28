@@ -1108,18 +1108,26 @@ end
 
 if ~isempty(opt.sv) %if svel cast exists
     svel=netcdf.defGrp(ncid,'svel');
-    sveldim=netcdf.defDim(svel,'cast_depth',numel(opt.sv.depth));
-    
-    svfields={'depth','depth','cast water depth','meters';...
-        'sos','svel','sound velocity','m/s'};
-    %to do - add cast coordinates, not sure if using avg of mutilple
-    %casts
-    
-    for i=1:size(svfields,1)
-        if isfield(opt.sv,svfields{i,1})
-            varid=netcdf.defVar(svel,svfields{i,2},'double',sveldim);
-            netcdf.putAtt(svel,varid,'long_name',svfields{i,3});
-            netcdf.putAtt(svel,varid,'units',svfields{i,4});
+    if isempty(opt.sv.depth)
+        sveldim=netcdf.defDim(svel,'cast_depth',1);
+        varid=netcdf.defVar(svel,'svel','double',sveldim);
+        netcdf.putAtt(svel,varid,'long_name','Sound Velocity');
+        netcdf.putAtt(svel,varid,'units','m/s')
+    else
+        
+        sveldim=netcdf.defDim(svel,'cast_depth',numel(opt.sv.depth));
+        
+        svfields={'depth','depth','cast water depth','meters';...
+            'sos','svel','sound velocity','m/s'};
+        %to do - add cast coordinates, not sure if using avg of mutilple
+        %casts
+        
+        for i=1:size(svfields,1)
+            if isfield(opt.sv,svfields{i,1})
+                varid=netcdf.defVar(svel,svfields{i,2},'double',sveldim);
+                netcdf.putAtt(svel,varid,'long_name',svfields{i,3});
+                netcdf.putAtt(svel,varid,'units',svfields{i,4});
+            end
         end
     end
 end
@@ -1186,12 +1194,15 @@ end
 %write svel data
 if ~isempty(opt.sv)
     if ~isempty(opt.sv.depth)
-    [~,nvars]=netcdf.inq(svel);
-    for i=1:nvars
-        varname=netcdf.inqVar(svel,i-1);
-        midx=find(strcmpi(varname,svfields(:,2)));
-        netcdf.putVar(svel,i-1,opt.sv.(svfields{midx,1})); %#ok
-    end
+        [~,nvars]=netcdf.inq(svel);
+        for i=1:nvars
+            varname=netcdf.inqVar(svel,i-1);
+            midx=find(strcmpi(varname,svfields(:,2)));
+            netcdf.putVar(svel,i-1,opt.sv.(svfields{midx,1})); %#ok
+        end
+    else
+        netcdf.putVar(svel,0,opt.sv.mean_vel)
+        
     end
 end
 
@@ -1522,8 +1533,12 @@ if isfield(ncdata.gatts,'applied_speed_of_sound');
         sv.use_mean_sos=0;
     else
         if isfield(ncdata,'svel')
-            sv.depth=ncdata.svel.depth;
-            sv.sos=ncdata.svel.svel;
+            if isfield(ncdata.svel,'depth')
+                sv.depth=ncdata.svel.depth;
+                sv.sos=ncdata.svel.svel;
+            else
+                sv.sos=ncdata.svel.svel;
+            end
         else
             sv.depth=[];
             sv.sos=[];
@@ -5880,6 +5895,7 @@ function sv = sos_gui(varargin)
 
 if nargin>0
     sv=varargin{1};
+    
     if ~isempty(sv.depth)
         
         data=cell(length(sv.depth),2);
@@ -5891,16 +5907,29 @@ if nargin>0
         list_enable='on';
         gd.sv=sv;
     else
-        gd.sv.depth=[];
-        gd.sv.sos=[];
-        gd.sv.time=[];
-        gd.sv.sos_orig=1500;
-        gd.sv.use_mean_sos=0;
-        gd.sv.use_prof=1;
-        gd.sv.mean_vel=[];
-        
-        list_enable='off';
-        data=cell(20,2);
+        if isempty(sv)
+            gd.sv.depth=[];
+            gd.sv.sos=[];
+            gd.sv.time=[];
+            gd.sv.sos_orig=1500;
+            gd.sv.use_mean_sos=0;
+            gd.sv.use_prof=1;
+            gd.sv.mean_vel=[];
+            
+            list_enable='off';
+            data=cell(20,2);
+        else
+            gd.sv.depth=[];
+            gd.sv.sos=[];
+            gd.sv.time=[];
+            gd.sv.sos_orig=sv.sos_orig;
+            gd.sv.use_mean_sos=1;
+            gd.sv.use_prof=0;
+            gd.sv.mean_vel=sv.mean_vel;
+            
+            list_enable='off';
+            data=cell(20,2);
+        end
         
     end
 else
