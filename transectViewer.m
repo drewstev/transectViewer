@@ -41,8 +41,8 @@ function transectViewer(varargin)
 % Andrew Stevens, 5/25/2007
 % astevens@usgs.gov
 
-gdata.tv_ver=2.83;
-gdata.modified='1/6/2016';
+gdata.tv_ver=2.84;
+gdata.modified='1/17/2017';
 
 
 %defaults
@@ -1668,7 +1668,7 @@ if ~isempty(gdata.topo)
         set(gdata.tlineh,'visible','on')
     else
         gdata.tlineh=plot(gdata.topo.dist,gdata.topo.z,...
-            'r-','linewidth',2);
+            'g-','linewidth',2);
         hold on
         gdata.l1=plot(gdata.bdata.adist,gdata.bdata.zc);
     end
@@ -2478,7 +2478,7 @@ if isfield(gdata,'sv')
     
     
 else
-    gdata.bdata.zc=(gdata.bdata.zraw-gdata.manoff)-...
+    gdata.bdata.zc=(gdata.bdata.zraw+gdata.manoff)-...
         gdata.bdata.tide;
 end
 
@@ -2830,7 +2830,7 @@ if ~isempty(gdata.info)
     data(1,1:length(fields))=fields;
     for i=1:length(fields)
         if isnumeric(cdata{i})
-            cdata{i}=sprintf('%0.2f',cdata{i});
+            cdata{i}=sprintf('%0.3f',cdata{i});
         end
     end
     data(2,1:length(fields))=cdata;
@@ -3024,6 +3024,12 @@ hold on
 gdata.l1=plot(1:numel(gdata.bdata.zraw),gdata.bdata.zraw,'r-');
 gdata.xlimr=get(gca,'xlim');
 gdata.ylimr=get(gca,'ylim');
+
+
+    if isfield(gdata,'gg')
+        
+       gdata=rmfield(gdata,'gg');
+    end
 
 guidata(hfig,gdata)
 
@@ -3545,7 +3551,7 @@ if isfield(gdata,'sv');
     
     gdata.bdata.zc=zsos-gdata.bdata.tide;
 else
-    gdata.bdata.zc=(gdata.bdata.zraw-gdata.manoff)-...
+    gdata.bdata.zc=(gdata.bdata.zraw+gdata.manoff)-...
         gdata.bdata.tide;
 end
 
@@ -3701,9 +3707,6 @@ if gdata.pan==1;
     set(gdata.toggle1,'value',0)
 end
 
-
-
-
 if isfield(gdata.bdata,'lon')
     geo=1;
 else
@@ -3751,24 +3754,24 @@ remLen=rem(dLen,fLen);
 %group soundings into groups that are roughly "fDist" in width
 zPF=reshape(gdata.bdata.zc(1:end-remLen),...
     [fLen floor(dLen/fLen)]);
-xPF=reshape(gdata.bdata.x(1:end-remLen),...
-    [fLen floor(dLen/fLen)]);
-yPF=reshape(gdata.bdata.y(1:end-remLen),...
-    [fLen floor(dLen/fLen)]);
-dnPF=reshape(gdata.bdata.mtime(1:end-remLen),...
-    [fLen floor(dLen/fLen)]);
-cDistPF=reshape(gdata.bdata.distance(1:end-remLen),...
-    [fLen floor(dLen/fLen)]);
-if ~isempty(gdata.bdata.adist)
-    caDistPF=reshape(gdata.bdata.adist(1:end-remLen),...
-        [fLen floor(dLen/fLen)]);
-end
-if geo
-    latPF=reshape(gdata.bdata.lat(1:end-remLen),...
-        [fLen floor(dLen/fLen)]);
-    lonPF=reshape(gdata.bdata.lon(1:end-remLen),...
-        [fLen floor(dLen/fLen)]);
-end
+% xPF=reshape(gdata.bdata.x(1:end-remLen),...
+%     [fLen floor(dLen/fLen)]);
+% yPF=reshape(gdata.bdata.y(1:end-remLen),...
+%     [fLen floor(dLen/fLen)]);
+% dnPF=reshape(gdata.bdata.mtime(1:end-remLen),...
+%     [fLen floor(dLen/fLen)]);
+% cDistPF=reshape(gdata.bdata.distance(1:end-remLen),...
+%     [fLen floor(dLen/fLen)]);
+% if ~isempty(gdata.bdata.adist)
+%     caDistPF=reshape(gdata.bdata.adist(1:end-remLen),...
+%         [fLen floor(dLen/fLen)]);
+% end
+% if geo
+%     latPF=reshape(gdata.bdata.lat(1:end-remLen),...
+%         [fLen floor(dLen/fLen)]);
+%     lonPF=reshape(gdata.bdata.lon(1:end-remLen),...
+%         [fLen floor(dLen/fLen)]);
+% end
 
 %detrend soundings in each group
 zdt=detrend(zPF);
@@ -3783,30 +3786,30 @@ gdata.flag=zeros(m,n);
 for i=1:n;
     ind=find(abs(zdt(:,i)-zdtm(i))>gdata.fStrength*zdtstd(i));
     zPF(ind,i)=NaN;
-    xPF(ind,i)=NaN;
-    yPF(ind,i)=NaN;
-    if geo
-        latPF(ind,i)=NaN;
-        lonPF(ind,i)=NaN;
-    end
-    dnPF(ind,i)=NaN;
+%     xPF(ind,i)=NaN;
+%     yPF(ind,i)=NaN;
+%     if geo
+%         latPF(ind,i)=NaN;
+%         lonPF(ind,i)=NaN;
+%     end
+%     dnPF(ind,i)=NaN;
 end
 
 % deal with the end of the profile
 if remLen~=0
     ze=gdata.bdata.zc(end-remLen+1:end);
-    xe=gdata.bdata.x(end-remLen+1:end);
-    ye=gdata.bdata.y(end-remLen+1:end);
-    dc=gdata.bdata.distance(end-remLen+1:end);
-    if ~isempty(gdata.bdata.adist)
-        da=gdata.bdata.adist(end-remLen+1:end);
-        caDistPF=[caDistPF(:);da];
-    end
-    if geo
-        lone=gdata.bdata.lon(end-remLen+1:end);
-        late=gdata.bdata.lat(end-remLen+1:end);
-    end
-    dne=gdata.bdata.mtime(end-remLen+1:end);
+%     xe=gdata.bdata.x(end-remLen+1:end);
+%     ye=gdata.bdata.y(end-remLen+1:end);
+%     dc=gdata.bdata.distance(end-remLen+1:end);
+%     if ~isempty(gdata.bdata.adist)
+%         da=gdata.bdata.adist(end-remLen+1:end);
+%         caDistPF=[caDistPF(:);da];
+%     end
+%     if geo
+%         lone=gdata.bdata.lon(end-remLen+1:end);
+%         late=gdata.bdata.lat(end-remLen+1:end);
+%     end
+%     dne=gdata.bdata.mtime(end-remLen+1:end);
     
     zdt=detrend(ze);
     zdtm=nanmean(zdt);
@@ -3815,14 +3818,14 @@ if remLen~=0
     
     
     zPF=[zPF(:);ze];
-    xPF=[xPF(:);xe];
-    yPF=[yPF(:);ye];
-    if geo
-        lonPF=[lonPF(:);lone];
-        latPF=[latPF(:);late];
-    end
-    cDistPF=[cDistPF(:);dc(:)];
-    dnPF=[dnPF(:);dne];
+%     xPF=[xPF(:);xe];
+%     yPF=[yPF(:);ye];
+%     if geo
+%         lonPF=[lonPF(:);lone];
+%         latPF=[latPF(:);late];
+%     end
+%     cDistPF=[cDistPF(:);dc(:)];
+%     dnPF=[dnPF(:);dne];
 end
 
 gdata.flag=isnan(zPF(:));
@@ -3838,19 +3841,19 @@ switch gdata.fType
         zc=slidefun(@max,gdata.wLen,zPF(:));
 end
 
-
-
-if geo
-    lonc=slidefun(@nanmean,gdata.wLen,lonPF(:));
-    latc=slidefun(@nanmean,gdata.wLen,latPF(:));
-end
-xc=slidefun(@nanmean,gdata.wLen,xPF(:));
-yc=slidefun(@nanmean,gdata.wLen,yPF(:));
-gdata.distc=slidefun(@nanmean,gdata.wLen,cDistPF(:));
-if ~isempty(gdata.bdata.adist)
-    gdata.adistc=slidefun(@nanmean,gdata.wLen,caDistPF(:));
-end
-dn=slidefun(@nanmean,gdata.wLen,dnPF(:));
+% 
+% 
+% if geo
+%     lonc=slidefun(@nanmean,gdata.wLen,lonPF(:));
+%     latc=slidefun(@nanmean,gdata.wLen,latPF(:));
+% end
+% xc=slidefun(@nanmean,gdata.wLen,xPF(:));
+% yc=slidefun(@nanmean,gdata.wLen,yPF(:));
+% gdata.distc=slidefun(@nanmean,gdata.wLen,cDistPF(:));
+% if ~isempty(gdata.bdata.adist)
+%     gdata.adistc=slidefun(@nanmean,gdata.wLen,caDistPF(:));
+% end
+% dn=slidefun(@nanmean,gdata.wLen,dnPF(:));
 
 % ind=find(isfinite(zc));
 % ind1=min(ind);
@@ -3882,8 +3885,8 @@ if isempty(gaps)~=1;
     bend(bstart==0)=[];
     bstart(bstart==0)=[];
     
-    dist=cellfun(@(x,y)(gdata.distc(y)-...
-        gdata.distc(x)),...
+    dist=cellfun(@(x,y)(gdata.bdata.distance(y)-...
+        gdata.bdata.distance(x)),...
         num2cell(bstart),num2cell(bend));
     
     fillGaps=find(dist<gdata.maxGap);
@@ -3896,10 +3899,10 @@ if isempty(gaps)~=1;
             zc(fillStart(i):fillEnd(i))=NaN;
         else
             zc(fillStart(i):fillEnd(i))=...
-                interp1([gdata.distc(fillStart(i));...
-                gdata.distc(fillEnd(i))],...
+                interp1([gdata.bdata.distance(fillStart(i));...
+                gdata.bdata.distance(fillEnd(i))],...
                 [zc(fillStart(i));zc(fillEnd(i))],...
-                gdata.distc(fillStart(i):fillEnd(i)));
+                gdata.bdata.distance(fillStart(i):fillEnd(i)));
         end
     end
     
@@ -3919,7 +3922,7 @@ if gdata.alongflag==1
         gdata.bdata.zc(gdata.flag==1),'o',...
         'color',[0.6 0.6 0.6],'markersize',3,...
         'markerfacecolor',[0.6 0.6 0.6]);
-    gdata.gg=plot(gdata.adistc,zc,'r-','linewidth',2);
+    gdata.gg=plot(gdata.bdata.adist,zc,'r-','linewidth',2);
 else
     
     gdata.l1=plot(gdata.bdata.distance,gdata.bdata.zc);
@@ -3928,7 +3931,7 @@ else
         gdata.bdata.zc(gdata.flag==1),'o',...
         'color',[0.6 0.6 0.6],'markersize',3,...
         'markerfacecolor',[0.6 0.6 0.6]);
-    gdata.gg=plot(gdata.distc,zc,'r-','linewidth',2);
+    gdata.gg=plot(gdata.bdata.distance,zc,'r-','linewidth',2);
 end
 
 set(gca,'xlim',gdata.xlims,'ylim',gdata.ylims);
@@ -3943,14 +3946,14 @@ end
 
 
 gdata.cdata.filename=gdata.bdata.filename;
-gdata.cdata.xc=xc;
-gdata.cdata.yc=yc;
+gdata.cdata.xc=gdata.bdata.x;
+gdata.cdata.yc=gdata.bdata.y;
 gdata.cdata.zc=zc;
 if geo
-    gdata.cdata.lat=latc;
-    gdata.cdata.lon=lonc;
+    gdata.cdata.lat=gdata.bdata.lat;
+    gdata.cdata.lon=gdata.bdata.lon;
 end
-gdata.cdata.mtime=dn;
+gdata.cdata.mtime=gdata.bdata.mtime;
 
 guidata(hfig,gdata)
 
@@ -5267,7 +5270,7 @@ if gdata.numedits>0
         
     else
         gdata.bdata.zc(gdata.edits{gdata.numedits})=...
-            (gdata.bdata.zraw(gdata.edits{gdata.numedits})-...
+            (gdata.bdata.zraw(gdata.edits{gdata.numedits})+...
             gdata.manoff)-...
             gdata.bdata.tide(gdata.edits{gdata.numedits});
     end
@@ -5494,10 +5497,16 @@ end
 if isfield(gdata,'sv')
     len1=length(data);
     data{len1+1,1}='Original Speed of Sound (m/s)';
-    if ischar(gdata.sv.sos_orig)
-        data{len1+1,2}=gdata.sv.sos_orig;
+    if isfield(gdata.sv,'sos_orig')
+        if ischar(gdata.sv.sos_orig)
+            
+            data{len1+1,2}=gdata.sv.sos_orig;
+            
+        else
+            data{len1+1,2}=sprintf('%0.2f',gdata.sv.sos_orig);
+        end
     else
-        data{len1+1,2}=sprintf('%0.2f',gdata.sv.sos_orig);
+        data{len1+1,2}='unknown';
     end
     
     data{len1+2,1}='Speed of Sound Applied (m/s)';
@@ -5698,7 +5707,7 @@ if isfield(gdata,'sv');
     gdata.bdata.zc=zsos-gdata.bdata.tide;
     
 else
-    gdata.bdata.zc=(gdata.bdata.zraw-gdata.manoff)-...
+    gdata.bdata.zc=(gdata.bdata.zraw+gdata.manoff)-...
         gdata.bdata.tide;
 end
 
@@ -5906,8 +5915,13 @@ if nargin>0
             num2cell(sv.sos),'un',0);
         list_enable='on';
         gd.sv=sv;
+        
+        if ~isfield(gd.sv,'sos_orig')
+            gd.sv.sos_orig=NaN;
+        end
+        
     else
-        if isempty(sv)
+        if isempty(sv) || ~isfield(sv,'mean_vel')
             gd.sv.depth=[];
             gd.sv.sos=[];
             gd.sv.time=[];
@@ -5922,7 +5936,11 @@ if nargin>0
             gd.sv.depth=[];
             gd.sv.sos=[];
             gd.sv.time=[];
-            gd.sv.sos_orig=sv.sos_orig;
+            if isfield(sv,'sos_orig')
+                gd.sv.sos_orig=sv.sos_orig;
+            else
+                gd.sv.sos_orig=NaN;
+            end
             gd.sv.use_mean_sos=1;
             gd.sv.use_prof=0;
             gd.sv.mean_vel=sv.mean_vel;
@@ -7491,9 +7509,11 @@ for i=1:length(codes);
         
         
         
-        data3=cell2mat(cellfun(@(x)(x(...
-            1:min(nvals(nvals~=0)))),r(nvals~=0),'un',0));
+%         data3=cell2mat(cellfun(@(x)(x(...
+%             1:min(nvals(nvals~=0)))),r(nvals~=0),'un',0));
+        data3=cell2mat(r(nvals==max(nvals)));
         
+
         %based on each of the codes, define variables
         %and format data into a structure
         switch codes{i}
