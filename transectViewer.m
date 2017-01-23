@@ -462,8 +462,14 @@ uimenu(gdata.menu4,'label','Compare Profiles','callback',...
     @bathy_comp)
 gdata.plotrtkppk=uimenu(gdata.menu4,'label','PPK - RTK GPS Comparison',...
     'callback',@plot_ppk_rtk,'visible','off');
-uimenu(gdata.menu4,'label','Add metadata to .nc',...
+
+bmenu=uimenu(gdata.menu4,'label','NetCDF Batch Processing');
+
+uimenu(bmenu,'label','Add metadata',...
     'callback',@batch_add_meta_gui);
+uimenu(bmenu,'label','Add vertical offset',...
+    'callback',@batch_add_offset);
+
 
 
 gdata.menu5=uimenu('label','Options');
@@ -4334,7 +4340,195 @@ gd2.ncpath=[];
 gd2.ncfiles=[];
 guidata(hf2,gd2);
 end
+%%%%-----------------------------------------------------------------------
+function [] = batch_add_offset(hf,evnt); %#ok
+% The basic layout of this GUI was made with the help of guidegetter,
+% available on the File Exchange at Mathworks.com
 
+gd=guidata(hf);
+gd2.metapath=gd.filepath;
+gd2.ncpath=gd.filepath;
+
+hf2 = figure('units','normalized',...
+    'position',[0.332 0.639 0.153 0.28],...
+    'menubar','none','name','Batch Add Manual Offset',...
+    'numbertitle','off','color',[0.94 0.94 0.94]);
+
+uicontrol(hf2,'style','Text',...
+    'units','normalized',...
+    'position',[0.0806 0.86 0.253 0.0975],...
+    'string','Manual Offset',...
+    'backgroundcolor',[0.94 0.94 0.94]);
+gd2.mtext = uicontrol(hf2,'style','edit',...
+    'units','normalized',...
+    'position',[0.392 0.883 0.509 0.0613],...
+    'string',gd.manoff,...
+    'backgroundcolor',[0.94 0.94 0.94],...
+    'callback',@checkoffset);
+gd2.checkbox=uicontrol(hf2,'style','Checkbox',...
+    'units','normalized',...
+    'position',[0.0806 0.76 0.53 0.0975],...
+    'string','Write XYZ Files',...
+    'backgroundcolor',[0.94 0.94 0.94],...
+    'value',0);
+gd2.nclist = uicontrol(hf2,'style','listbox',...
+    'units','normalized',...
+    'position',[0.396 0.203 0.52 0.515],...
+    'string','No files selected',...
+    'backgroundcolor',[1 1 1]);
+uicontrol(hf2,'style','pushbutton',...
+    'units','normalized',...
+    'position',[0.0842 0.621 0.253 0.0975],...
+    'string','Open .nc files',...
+    'backgroundcolor',[0.94 0.94 0.94],...
+    'callback',@select_nc_files_offset);
+
+gd2.textstr=uicontrol(hf2,'style','text',...
+        'units','normalized',...
+    'position',[0.0806 0.1 0.453 0.0919],...
+    'string','Working Please Wait...',...
+    'foregroundcolor','r',...
+    'visible','off');
+
+uicontrol(hf2,'style','pushbutton',...
+    'units','normalized',...
+    'position',[0.363 0.0223 0.253 0.0919],...
+    'string','Cancel',...
+    'backgroundcolor',[0.94 0.94 0.94],...
+    'callback',@(h,e)(close(hf2)));
+
+
+gd2.done = uicontrol(hf2,'style','pushbutton',...
+    'units','normalized',...
+    'position',[0.663 0.0223 0.253 0.0919],...
+    'string','Done',...
+    'backgroundcolor',[0.94 0.94 0.94],...
+    'enable','off',...
+    'callback',@add_offset_nc);
+
+gd2.goflag=[0 0];
+guidata(hf2,gd2)
+end
+
+function checkoffset(hf2,evnt) %#ok
+
+gd2=guidata(hf2);
+offset=str2double(get(gd2.mtext,'string'));
+if isfinite(offset)
+    gd2.goflag(1)=1;
+else
+    gd2.goflag(1)=0;
+end
+
+if all(gd2.goflag==1)
+    set(gd2.done,'enable','on')
+else 
+    set(gd2.done,'enable','off')
+end
+
+guidata(hf2,gd2)
+end
+
+function select_nc_files_offset(hf2,evnt) %#ok
+
+gd2=guidata(hf2);
+[filename, pathname] = uigetfile( ...
+    {'*.nc', 'NC Files (*.nc)'},...
+    'Select a File(s)','multiselect','on',...
+    gd2.ncpath);
+if pathname==0
+    return
+    
+end
+
+if ~iscell(filename)
+    filename={filename};
+end;
+gd2.ncfiles=filename;
+gd2.ncpath=pathname;
+gd2.goflag(2)=1;
+
+
+set(gd2.nclist,'string',gd2.ncfiles)
+
+if all(gd2.goflag==1)
+    set(gd2.done,'enable','on')
+end
+
+guidata(hf2,gd2)
+end
+
+
+function add_offset_nc(hf2,evnt) %#ok
+%add_manual_offset_nc -add a vertical offset to netcdf file
+%   applies offset to 'zc' and 'zf' (corrected and smoothed fields in the
+%   bathy group. offset is added (positive makes profile shallower).
+
+
+gd2=guidata(hf2);
+set(gd2.textstr,'visible','on')
+drawnow
+offset=str2double(get(gd2.mtext,'string'));
+writexyz=get(gd2.checkbox,'value');
+
+for i=1:length(gd2.ncfiles)
+    info=ncinfo([gd2.ncpath,gd2.ncfiles{i}]);
+    groups=arrayfun(@(x)(x.Name),info.Groups,'un',0);
+    gidx=find(strcmpi('bathy',groups));
+    if ~isempty(gidx)
+        bfields=arrayfun(@(x)(x.Name),info.Groups(gidx).Variables,'un',0);
+        [cfields,ci]=intersect({'zc';'zf'},bfields);
+        if ~isempty(cfields)
+            %first see if there already is a manual offset applied
+            gnames=arrayfun(@(x)(x.Name),info.Attributes,'un',0)';
+            
+            if any(strcmpi('manual_offset',gnames))
+                orig_off=ncreadatt([gd2.ncpath,gd2.ncfiles{i}],...
+                    '/','manual_offset');
+                fin_off=orig_off+offset;
+            else
+                fin_off=offset;
+            end
+            
+            ncwriteatt([gd2.ncpath,gd2.ncfiles{i}],'/',...
+                'manual_offset',fin_off);
+            str=sprintf('%0.3f',offset);
+            ncwriteatt([gd2.ncpath,gd2.ncfiles{i}],'/',...
+                'manual_offset',str);
+            
+            
+            for j = 1:length(ci)
+                zn=ncread([gd2.ncpath,gd2.ncfiles{i}],...
+                    ['bathy/',cfields{j}]);
+                ncwrite([gd2.ncpath,gd2.ncfiles{i}],...
+                    ['bathy/',cfields{j}],zn+offset);
+            end
+            
+            if writexyz
+                
+                x=ncread([gd2.ncpath,gd2.ncfiles{i}],...
+                    'bathy/x');
+                y=ncread([gd2.ncpath,gd2.ncfiles{i}],...
+                    'bathy/y');
+                dlmwrite([gd2.ncpath,strtok(gd2.ncfiles{i},'.'),...
+                    '.xyz'],[x y zn+offset],...
+                    'delimiter',' ' ,'precision','%0.3f');
+            end
+        end
+    end
+end
+  
+
+set(gd2.textstr,'visible','off')
+set(gd2.nclist,'string','No files selected')
+gd2.goflag(2)=0;
+set(gd2.done,'enable','off')
+
+gd2.ncpath=[];
+gd2.ncfiles=[];
+guidata(hf2,gd2);
+
+end
 %%%%%----------------------------------------------------------------------
 function panIm(hfig,eventdata,handles)%#ok
 
@@ -5689,6 +5883,9 @@ numlines=1;
 defaultanswer={num2str(gdata.manoff)};
 
 answer=inputdlg(prompt,name,numlines,defaultanswer);
+if isempty(answer)
+    return
+end
 gdata.manoff=str2double(answer{:});
 
 %apply manual offset
