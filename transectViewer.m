@@ -646,6 +646,23 @@ if isfield(gdata.bdata,'zc')==0
     gdata.rdata.tide=zeros(size(gdata.rdata.antennaH));
 end
 
+
+% if isfield(gdata,'sv');
+%     if gdata.invert==1
+%         zraw=-gdata.bdata.zraw;
+%     end
+%     zsos=apply_sos_prof(zraw,gdata.sv.sos_orig,...
+%         [gdata.sv.depth gdata.sv.sos],gdata.sv.use_mean_sos,...
+%         gdata.sv.mean_vel)-gdata.manoff;
+%     if gdata.invert==1
+%         zsos=-zsos;
+%     end
+%     
+%     gdata.bdata.zc=zsos-gdata.bdata.tide;
+% else
+%     gdata.bdata.zc=(gdata.bdata.zraw+gdata.manoff)-...
+%         gdata.bdata.tide;
+% end
 % if isfield(gdata,'sos_corr');
 %     zsos=(gdata.bdata.zraw.*gdata.sos_corr.ratio)-gdata.manoff;
 %     gdata.bdata.zc=zsos-gdata.bdata.tide;
@@ -1572,7 +1589,11 @@ if exist('sos_corr','var')
     gdata.sos_corr=sos_corr;
 end
 if isfield(ncdata.gatts,'manual_offset')
+    if ischar(ncdata.gatts.manual_offset)
+        gdata.manoff=str2double(ncdata.gatts.manual_offset);
+    else
     gdata.manoff=ncdata.gatts.manual_offset;
+    end
 end
 if exist('cdata','var')
     gdata.cdata=cdata;
@@ -4485,14 +4506,14 @@ for i=1:length(gd2.ncfiles)
             if any(strcmpi('manual_offset',gnames))
                 orig_off=ncreadatt([gd2.ncpath,gd2.ncfiles{i}],...
                     '/','manual_offset');
-                fin_off=orig_off+offset;
+                fin_off=str2double(orig_off)+offset;
             else
                 fin_off=offset;
             end
             
             ncwriteatt([gd2.ncpath,gd2.ncfiles{i}],'/',...
                 'manual_offset',fin_off);
-            str=sprintf('%0.3f',offset);
+            str=sprintf('%0.3f',fin_off);
             ncwriteatt([gd2.ncpath,gd2.ncfiles{i}],'/',...
                 'manual_offset',str);
             
