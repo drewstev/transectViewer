@@ -3184,6 +3184,12 @@ switch evnt.Character
         end
     case 'b'
         exportAll(hfig)
+    case 'a'
+        if gdata.alongflag
+            viewAbsolute(hfig)
+        else
+            viewAlong(hfig)
+        end
 end
 end
 %%%%%----------------------------------------------------------------------
