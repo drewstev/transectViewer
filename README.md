@@ -9,4 +9,3 @@ transectViewer
 at the matlab command prompt.  No manual is currently available.  Please direct questions to me:
 astevens@usgs.gov
 
-

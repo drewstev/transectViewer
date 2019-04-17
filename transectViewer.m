@@ -41,8 +41,8 @@ function transectViewer(varargin)
 % Andrew Stevens, 5/25/2007
 % astevens@usgs.gov
 
-gdata.tv_ver=2.84;
-gdata.modified='1/17/2017';
+gdata.tv_ver=2.93;
+gdata.modified='12/6/2018';
 
 
 %defaults
@@ -55,14 +55,14 @@ gdata.fStrength=1.5;
 %Filter Type
 gdata.fType='meanf';
 %running filter length
-gdata.wLen=10;
+gdata.wLen=5;
 %good depths must be between...
 gdata.minz=0.2;
 gdata.maxz=50;
 %maximum offset
 gdata.maxoffset=inf;
 %maximum interpolation distance
-gdata.maxGap=25;
+gdata.maxGap=5;
 %fix hydrobox echosounder flag (derelict should remove this stuff)
 gdata.echofix=0;
 gdata.fixlen=200;
@@ -244,7 +244,7 @@ gdata.text1=uicontrol('style','text',...
 
 switch fidx
     case 1
-        if goodtrans==1;
+        if goodtrans==1
             textstr= ['Displaying transect 1 of ',num2str(length(fnames)) ,...
                 ' - ',fnames{1}];
             set(gdata.text1,'string',textstr)
@@ -451,7 +451,11 @@ if isempty(gdata.bdata.adist)
 end
 gdata.menu15=uimenu(gdata.menu7,'label','Absolute Distance',....
     'visible','off','callback',@viewAbsolute);
-
+gdata.tview=uimenu(gdata.menu7,'label','Tilt Data',...
+    'visible','off','callback',@plot_tilt);
+if isfield(gdata.bdata,'pitch')
+    set(gdata.tview,'visible','on')
+end
 
 
 gdata.menu4=uimenu('label','Utilities');
@@ -484,9 +488,15 @@ gdata.interpDist=uimenu(gdata.menu5,'label','Max Interpolation Distance',...
 gdata.manOffset=uimenu(gdata.off1,'label','Manual Offset',...
     'callback',@manualOffset);
 uimenu(gdata.menu5,'label','Tide Options','callback',@run_tidedlg);
-if gdata.echofix==1;
+if gdata.echofix==1
     gdata.efmenu=uimenu(gdata.menu5,'label','Hyrdobox Fix Window Length',...
         'callback',@runEchoFix);
+end
+gdata.tiltmenu=uimenu(gdata.menu5,'label','Tilt Options',...
+    'callback',@run_tilt_opt_gui,...
+    'visible','off');
+if isfield(gdata.bdata,'pitch')
+    set(gdata.tiltmenu,'visible','on')
 end
 
 switch fidx
@@ -506,7 +516,7 @@ end
 
 a=ver;
 tboxes={a.Name}';
-if any(strcmpi('signal processing toolbox',tboxes))~=1;
+if any(strcmpi('signal processing toolbox',tboxes))~=1
     set(gdata.wv,'enable','off')
 end
 gdata.menu16=uimenu(gdata.menu5,'label','Raw Data Color Limits',...
@@ -592,19 +602,22 @@ if ~isfield(gdata,'info')
 end
 gdata.rclims=[];
 
-gdata.lfd.lftype=1;
+gdata.lfd.lftype=2;
 gdata.lfd.lflen=3;
 
 gdata.applyppk=0;
 
 gdata.batch.out_xyz=1;
 gdata.batch.out_nc=1;
-gdata.batch.out_kml=1;
-gdata.batch.out_shp=1;
+gdata.batch.out_kml=0;
+gdata.batch.out_shp=0;
 
 gdata.tideopt.method='none';
 gdata.tideopt.maxgap=gdata.maxGap;
 gdata.tideopt.badtide=[];
+
+gdata.tilt_opts.max_tilt=10;
+gdata.tilt_opts.use_tilt=0;
 
 guidata(hfig,gdata);
 
@@ -683,6 +696,13 @@ end
 
 gdata.applyppk=0;
 
+if isfield(gdata.bdata,'pitch')
+    set(gdata.tview,'visible','on')
+    set(gdata.tiltmenu,'visible','on')
+else
+        set(gdata.tview,'visible','off')
+    set(gdata.tiltmenu,'visible','off')
+end
 
 if isfield(gdata.bdata,'tide')
     set(gdata.wv,'enable','on')
@@ -1039,6 +1059,10 @@ if ~isempty(opt.bindata)
         opt.bdata.lon=opt.bdata.lon(ia);
         opt.bdata.lat=opt.bdata.lat(ia);
     end
+    if isfield(opt.bdata,'pitch')
+        opt.bdata.pitch=opt.bdata.pitch(ia);
+        opt.bdata.roll=opt.bdata.roll(ia);
+    end
     opt.bdata.zraw=opt.bdata.zraw(ia);
     opt.bdata.tide=opt.bdata.tide(ia);
     opt.bdata.zc=opt.bdata.zc(ia);
@@ -1098,7 +1122,9 @@ bfields={'mtime','mtime','matlab date number','days past midnight Jan 1, 0000';.
     'lon','longitude','Longitude','decimal degrees east';...
     'zraw','zraw','Depth Below Transducer','meters';...
     'tide','tide','Tide Correction','meters';...
-    'zc','zc','Corrected Depth','meters'};
+    'zc','zc','Corrected Depth','meters';...
+    'pitch','pitch','Pitch from tilt sensor','degrees';...
+    'roll','roll','Roll from tilt sensor','degrees'};
 
 if ~isempty(opt.fdata)
     bfields2={'zf','zf','Smoothed, Corrected Depth','meters'};
@@ -1205,7 +1231,7 @@ for i=1:nvars
     if strcmpi('zf',varname)
         netcdf.putVar(bathy,i-1,opt.fdata.zf);
     else
-        if isempty(opt.bdata.(bfields{midx,1}));
+        if isempty(opt.bdata.(bfields{midx,1}))
             opt.bdata.(bfields{midx,1})=opt.bdata.mtime.*NaN;
         end
         netcdf.putVar(bathy,i-1,opt.bdata.(bfields{midx,1}));
@@ -1451,7 +1477,9 @@ bfields={'mtime','mtime';...
     'lon','longitude';...
     'zraw','zraw';...
     'tide','tide';...
-    'zc','zc'};
+    'zc','zc';...
+    'pitch','pitch';...
+    'roll','roll'};
 
 bdata.filename=ncdata.gatts.raw_filename;
 for i=1:size(bfields,1)
@@ -2473,7 +2501,7 @@ if isfield(gdata.hdr,'linex');
     
 end
 
-if isfield(gdata.rdata,'lon');
+if isfield(gdata.rdata,'lon')
     gdata.bdata.lon=interp1(btime,gdata.rdata.lon(bind),gdata.bdata.vtime);
     gdata.bdata.lat=interp1(btime,gdata.rdata.lat(bind),gdata.bdata.vtime);
 end
@@ -2989,6 +3017,10 @@ if isempty(gdata.bindata);
         if isfield(gdata.bdata,'lon')
             gdata.bdata.lon=gdata.bdata.lon(ia);
             gdata.bdata.lat=gdata.bdata.lat(ia);
+        end
+        if isfield(gdata.bdata,'pitch')
+            gdata.bdata.pitch=gdata.bdata.pitch(ia);
+            gdata.bdata.roll=gdata.bdata.roll(ia);
         end
         gdata.bdata.zraw=gdata.bdata.zraw(ia);
         gdata.bdata.tide=gdata.bdata.tide(ia);
@@ -3613,12 +3645,22 @@ else
     
 end
 
+if isfield(gdata.bdata,'pitch')
+    set(gdata.tview,'visible','on')
+    set(gdata.tiltmenu,'visible','on')
+    
+else
+    set(gdata.tview,'visible','off')
+    set(gdata.tiltmenu,'visible','off')
+    
+end
+
 if gdata.echofix==1
     gdata.bdata=echofix(gdata.fixlen,gdata.bdata);
 end
 
 
-if isfield(gdata,'adistc');
+if isfield(gdata,'adistc')
     gdata=rmfield(gdata,'adistc');
 end
 
@@ -3816,7 +3858,7 @@ zdtstd=nanstd(zdt);
 %loop through and remove outliers from each group
 
 gdata.flag=zeros(m,n);
-for i=1:n;
+for i=1:n
     ind=find(abs(zdt(:,i)-zdtm(i))>gdata.fStrength*zdtstd(i));
     zPF(ind,i)=NaN;
 %     xPF(ind,i)=NaN;
@@ -3862,6 +3904,14 @@ if remLen~=0
 end
 
 gdata.flag=isnan(zPF(:));
+
+%use tilt for additional outlier rejection
+if gdata.tilt_opts.use_tilt
+    tilt=sqrt(gdata.bdata.pitch.^2+gdata.bdata.roll.^2);
+    zPF(tilt>gdata.tilt_opts.max_tilt)=NaN;
+    gdata.flag(tilt>gdata.tilt_opts.max_tilt)=1;
+end
+
 
 switch gdata.fType
     case 1
@@ -3910,7 +3960,7 @@ end
 
 %fill gaps less than max value
 gaps=isnan(zc(1:end-1));
-if isempty(gaps)~=1;
+if isempty(gaps)~=1
     [c,ind]=getchunks(gaps,'-full');
     bind=find(isnan(zc(ind))==1);
     bstart=ind(bind)-1;
@@ -4175,17 +4225,22 @@ gdata=guidata(hfig);
 set(gdata.push3,'backgroundcolor','g');
 
 gdata.pan=get(gdata.toggle1,'value');
-if gdata.pan==1;
+if gdata.pan==1
     set(gdata.toggle1,'value',0);
     pan off
 end
 
+
 k=waitforbuttonpress; %#ok
 point1 = get(gca,'CurrentPoint');
 finalRect = rbbox; %#ok
+pause(0.05)
 point2 = get(gca,'CurrentPoint');
 point1 = point1(1,1:2);
 point2 = point2(1,1:2);
+
+xlimsN=sort([point1(1),point2(1)]);
+ylimsN=sort([point1(2),point2(2)]);
 
 xlimsN=sort([point1(1),point2(1)]);
 ylimsN=sort([point1(2),point2(2)]);
@@ -4193,7 +4248,7 @@ set(gdata.ax1,'xlim',xlimsN,'ylim',ylimsN);
 
 gdata.xlims=xlimsN;
 gdata.ylims=ylimsN;
-if xlimsN(1)>=1;
+if xlimsN(1)>=1
     gdata.pno=round(xlimsN(1));
 else
     gdata.pno=1;
@@ -5385,7 +5440,7 @@ else
                 gdata.bdata.zc(gdata.flag==1),'o',...
                 'color',[0.6 0.6 0.6],'markersize',3,...
                 'markerfacecolor',[0.6 0.6 0.6]);
-            gdata.gg=plot(gdata.adistc,gdata.bdata.zc,'r-','linewidth',2);
+            gdata.gg=plot(gdata.bdata.adist,gdata.bdata.zc,'r-','linewidth',2);
         else
             
             gdata.l1=plot(gdata.bdata.distance,gdata.bdata.zc);
@@ -7095,7 +7150,7 @@ switch gdata.lfd.lftype
 end
 
 
-if ~isfield(gdata,'eraw');
+if ~isfield(gdata,'eraw')
     gdata.eraw=gdata.bdata.zraw;
     gdata.ezc=gdata.bdata.zc;
 end
@@ -7104,12 +7159,12 @@ if gdata.numedits==0
     set(gdata.menu13,'visible','on');
 end
 gdata.numedits=gdata.numedits+1;
-if gdata.pan==1;
+if gdata.pan==1
     set(gdata.toggle1,'value',0);
     pan off
 end
 
-if gdata.rawflag==1;
+if gdata.rawflag==1
     pl = selectdata('sel','lasso','ignore',gdata.rim);
     
     
@@ -7136,8 +7191,15 @@ if gdata.rawflag==1;
     else
         gdata.bdata.zraw(pl)=slidefun(fun,gdata.lfd.lflen,...
             gdata.bdata.zraw(pl));
+    
+%         gdata.bdata.zc(pl)=((gdata.bdata.zraw(pl)-...
+%             gdata.bdata.tide(pl)))-gdata.manoff;
+
+    if gdata.invert==1
+        manoff=-gdata.manoff;
+    end
         gdata.bdata.zc(pl)=((gdata.bdata.zraw(pl)-...
-            gdata.bdata.tide(pl)).*gdata.invert)-gdata.manoff;
+            gdata.bdata.tide(pl)))-manoff;
     end
     
     
@@ -7204,7 +7266,7 @@ else
                 gdata.bdata.zc(gdata.flag==1),'o',...
                 'color',[0.6 0.6 0.6],'markersize',3,...
                 'markerfacecolor',[0.6 0.6 0.6]);
-            gdata.gg=plot(gdata.adistc,gdata.bdata.zc,'r-','linewidth',2);
+            gdata.gg=plot(gdata.bdata.adist,gdata.bdata.zc,'r-','linewidth',2);
         else
             
             gdata.l1=plot(gdata.bdata.distance,gdata.bdata.zc);
@@ -7611,7 +7673,7 @@ if nargin>0
 end
 
 
-if isempty(fpath)==1;
+if isempty(fpath)==1
     [filename, pathname] = ...
         uigetfile('*.RAW', 'Pick an RAW-file');
     fpath=[pathname,filename];
@@ -7708,7 +7770,7 @@ data{1}=data{1}(firstP:end);
 data{2}=data{2}(firstP:end);
 
 %define codes and associated formats
-codes={'EC2';'EC1';'POS';'QUA';'RAW';'TID';'KTC'};
+codes={'EC2';'EC1';'POS';'QUA';'RAW';'TID';'KTC';'HCP'};
 formats={'%*d %f %f';...
     '%*d %f %f';...
     '%*d %f %f %f %*f';...
@@ -7716,10 +7778,11 @@ formats={'%*d %f %f';...
     '%*d %*d %*d %*f %*d'];...
     '%*d %*f %*d %f %f %f %f';...
     '%*d %f %f';...
-    ['%*d',repmat(' %f',1,9)]};
+    ['%*d',repmat(' %f',1,9)];...
+    '%*d %f %*f %f %f'};
 
 
-for i=1:length(codes);
+for i=1:length(codes)
     
     %for each code, turn strings of data into
     %a matrix...kinda cool way to handle complex
@@ -7811,7 +7874,10 @@ for i=1:length(codes);
                 kdata.antenna_offset=data3(:,7);
                 kdata.draft_correction=data3(:,8);
                 
-                
+            case 'HCP'
+                hpr.mtime=data3(:,1);
+                hpr.pitch=data3(:,3);
+                hpr.roll=data3(:,2);
                 
         end
     end
@@ -7881,7 +7947,7 @@ bdata.distance=[0,cumsum(dist)'];
 
 
 % if it is a straight line followed, calculate offline distance
-if isfield(hdr,'linex');
+if isfield(hdr,'linex')
     if length(hdr.linex)==2
         m=(hdr.liney(end)-hdr.liney(1))/...
             (hdr.linex(end)-hdr.linex(1));
@@ -7910,6 +7976,12 @@ if isfield(hdr,'linex');
         bdata.adist=[];
     end
     
+end
+
+if exist('hpr','var')
+    [hprt,hind]=unique(hpr.mtime);
+    bdata.pitch=interp1(hprt,hpr.pitch(hind),ztime);
+    bdata.roll=interp1(hprt,hpr.roll(hind),ztime);
 end
 
 if isfield(rdata,'lon');
@@ -8173,6 +8245,146 @@ if nargout>1
 end
 
 end
+%%%%%%---------------------------------------------------------------------
+function plot_tilt(hfig,evnt)
+gdata=guidata(hfig);
+
+
+f1=figure;
+set(f1,'units','normalized');
+ax(1)=subplot(211);
+plot(gdata.bdata.distance,gdata.bdata.pitch)
+hold on 
+plot(gdata.bdata.distance,gdata.bdata.roll)
+
+leg=legend('Pitch','Roll');
+set(leg,'autoupdate','off')
+ylabel('Deg.')
+
+xl=xlim;
+line(xl,[0 0],'color','k')
+
+pt=sqrt(gdata.bdata.pitch.^2+gdata.bdata.roll.^2);
+ax(2)=subplot(212);
+plot(gdata.bdata.distance,pt)
+
+legend('Tilt');
+
+set(ax,'xlim',xl);
+set(ax(1),'xticklabel',[])
+xlabel('Distance (m)')
+ylabel('Deg.')
+
+linkaxes(ax,'x')
+
+f1pos=get(f1,'position');
+
+h2=figure;
+set(h2,'Name','Tilt Metrics','menubar','none','numbertitle','off',...
+    'units','normalized','position',...
+    [f1pos(1)+f1pos(3) f1pos(2)+(f1pos(4)/2) 0.2 0.2] );
+
+prm(1,1)=mean(gdata.bdata.pitch,'omitnan');
+prm(2,1)=median(gdata.bdata.pitch,'omitnan');
+prm(3,1)=std(gdata.bdata.pitch,'omitnan');
+prm(1,2)=mean(gdata.bdata.roll,'omitnan');
+prm(2,2)=median(gdata.bdata.roll,'omitnan');
+prm(3,2)=std(gdata.bdata.roll,'omitnan');    
+
+prmc=cellfun(@(x)(sprintf('%0.2f',x)),num2cell(prm),'un',0);
+prmc1={'Mean';'Median';'Std.'};
+prmc=cat(2,prmc1,prmc);
+    
+    
+    mtable=uitable(h2,'Data',prmc,'columnname',{'','Pitch','Roll'});
+    set(mtable,'units','normalized','position',[0.1 0.3 0.8 0.4]);
+    
+    set(h2,'units','pixels')
+    pix=get(h2,'position');
+    cwidth=floor([0.1 0.2 0.2]*pix(3));
+    set(mtable,'columnwidth',num2cell(cwidth))
+
+end
+%%%%-----------------------------------------------------------------------
+function run_tilt_opt_gui(hfig,evnt) %#ok
+gdata=guidata(hfig);
+gdata.tilt_opts=tilt_opt_gui(gdata.tilt_opts);
+guidata(hfig,gdata)
+end
+
+function tdstr = tilt_opt_gui(tdstr)
+% The basic layout of this GUI was made with the help of guidegetter,
+% available on the File Exchange at Mathworks.com
+
+hf = figure('units','normalized','position',[0.368 0.803 0.11 0.125],...
+    'menubar','none','name','tilt_opt_gui',...
+    'numbertitle','off','color',[0.94 0.94 0.94]);
+
+gd.checktilt = uicontrol(hf,'style','checkbox','units','normalized',...
+    'position',[0.185 0.731 0.856 0.147],...
+    'string','Use tilt for outlier rejection',...
+    'backgroundcolor',[0.94 0.94 0.94],...
+    'value',tdstr.use_tilt,...
+    'callback',@checkmotion);
+
+text1 = uicontrol(hf,'style','text','units','normalized',...
+    'position',[0.0266 0.343 0.541 0.216],...
+    'string','Max. Tilt','backgroundcolor',[0.94 0.94 0.94],...
+    'horizontalalign','right');
+
+gd.maxtilt = uicontrol(hf,'style','edit','units','normalized',...
+    'position',[0.639 0.363 0.307 0.219],...
+    'string',sprintf('%0.1f',tdstr.max_tilt),...
+    'backgroundcolor',[1 1 1]);
+if get(gd.checktilt,'value')==0
+    set(gd.maxtilt,'enable','off')
+end
+
+uicontrol(hf,'style','pushbutton','units','normalized',...
+    'position',[0.628 0.0933 0.319 0.149],...
+    'string','OK','backgroundcolor',[0.94 0.94 0.94],...
+    'callback',@tiltdone);
+uicontrol(hf,'style','pushbutton','units','normalized',...
+    'position',[0.283 0.0933 0.319 0.149],...
+    'string','Cancel','backgroundcolor',[0.94 0.94 0.94],...
+    'callback',@(h,e)(close(hf)));
+guidata(hf,gd)
+
+uiwait
+if ishandle(hf)
+    gd=guidata(hf);
+    tdstr.max_tilt=gd.maxtval;
+    tdstr.use_tilt=gd.checkval;
+    close(hf)
+end
+end
+%%%%---------------------------------------------------
+function tiltdone(hf,evnt)%#ok
+gd=guidata(hf);
+
+gd.checkval=get(gd.checktilt,'value');
+gd.maxtval=str2double(get(gd.maxtilt,'string'));
+guidata(hf,gd)
+uiresume
+end
+%%%%----------------------------------------------
+function checkmotion(hf,evnt) %#ok
+gd=guidata(hf);
+
+gd.checkval=get(gd.checktilt,'value');
+if gd.checkval
+    set(gd.maxtilt,'enable','on')
+else
+    set(gd.maxtilt,'enable','off')
+end
+end
+    
+
+
+
+
+
+
 
 %%%%----------------------------------------------------------------------
 function R = slidefun (FUN, W, V, windowmode, varargin)
@@ -10443,7 +10655,7 @@ for i=1:n
     if numel(ind2)==1
         bdepth(i)=gdata.bindata.range(ind2+blkind);
     else
-        bind=ind2(find(c2>minwidth==1,1,'last'));
+        bind=ind2(find(c2>minwidth==1,1,'first'));
         if ~isempty(bind)
             bdepth(i)=gdata.bindata.range(bind+blkind);
         end
@@ -10910,7 +11122,9 @@ z1=data1(subs(:,1),3);
 z2=data2(subs(:,2),3);
 
 dz=z2-z1;
-
+    q5=interp1(linspace(0,100,numel(dz)),sort(dz),1);
+    q95=interp1(linspace(0,100,numel(dz)),sort(dz),99);
+    
 if get(gd.mflag,'value')==1
     figure('name','Map View')
     plot(data1(:,1),data1(:,2),'.','color',[0.6 0.6 0.6])
@@ -10932,6 +11146,13 @@ if get(gd.mflag,'value')==1
         'box','off')
     xlabel('X','fontsize',12)
     ylabel('Y','fontsize',12)
+    
+    scatter(data2(subs(:,2),1),data2(subs(:,2),2),10,...
+        dz,'filled')
+    caxis([q5 q95])
+    
+    colorbar
+    
 end
 
 if get(gd.rflag,'value')==1
@@ -10944,8 +11165,7 @@ if get(gd.rflag,'value')==1
     sk.mean_offset=mean_dz;
     
     
-    q5=interp1(linspace(0,100,numel(dz)),sort(dz),1);
-    q95=interp1(linspace(0,100,numel(dz)),sort(dz),99);
+
     
     xi=linspace(q5,q95,30);
     [n,bin]=histc(dz,xi);
